@@ -1,0 +1,1148 @@
+@page "/novedades"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using VisitaPDV.Admin.Models
+
+<PageTitle>Seguimiento de Novedades — VisitaPDV Admin</PageTitle>
+
+<div class="container-fluid py-2">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-dark mb-1"><i class="bi bi-chat-left-text-fill text-primary me-2"></i>Seguimiento de Novedades</h4>
+            <p class="text-muted small mb-0">Gestiona y resuelve las incidencias reportadas por los visitadores en el punto de venta.</p>
+        </div>
+        <button class="btn btn-outline-primary btn-sm" @onclick="LoadDataAsync">
+            <i class="bi bi-arrow-clockwise me-1"></i> Refrescar
+        </button>
+    </div>
+
+    <!-- KPIs y Badges Superiores -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-white p-3 rounded-3 d-flex flex-row align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold uppercase d-block mb-1">Novedades Abiertas</span>
+                    <h3 class="fw-bold text-primary mb-0">@_cntAbiertas</h3>
+                </div>
+                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+                    <i class="bi bi-folder-fill fs-4"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-white p-3 rounded-3 d-flex flex-row align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold uppercase d-block mb-1">En Proceso</span>
+                    <h3 class="fw-bold text-warning mb-0">@_cntEnProgreso</h3>
+                </div>
+                <div class="bg-warning bg-opacity-10 text-warning p-3 rounded-circle">
+                    <i class="bi bi-gear-fill fs-4"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-white p-3 rounded-3 d-flex flex-row align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold uppercase d-block mb-1">Pendiente Info</span>
+                    <h3 class="fw-bold text-danger mb-0">@_cntPendientesInfo</h3>
+                </div>
+                <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
+                    <i class="bi bi-info-circle-fill fs-4"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-white p-3 rounded-3 d-flex flex-row align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold uppercase d-block mb-1">Vencidas</span>
+                    <h3 class="fw-bold text-danger mb-0">@_cntVencidas</h3>
+                </div>
+                <div class="bg-danger bg-opacity-20 text-danger p-3 rounded-circle">
+                    <i class="bi bi-exclamation-triangle-fill fs-4 animate-pulse"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3">
+            <div class="row g-3">
+                <div class="col-md-2 col-sm-6">
+                    <label class="form-label small fw-semibold text-muted">Estado</label>
+                    <select class="form-select form-select-sm" @bind="_filterEstado">
+                        <option value="">Todos</option>
+                        <option value="Abierta">Abierta</option>
+                        <option value="EnProgreso">En Proceso</option>
+                        <option value="Resuelta">Resuelta</option>
+                        <option value="Cerrada">Cerrada</option>
+                        <option value="Reabierta">Reabierta</option>
+                        <option value="Vencida">Vencida</option>
+                        <option value="Cancelada">Cancelada</option>
+                        <option value="PendienteInformacion">Pendiente Info</option>
+                    </select>
+                </div>
+                <div class="col-md-2 col-sm-6">
+                    <label class="form-label small fw-semibold text-muted">Categoría</label>
+                    <select class="form-select form-select-sm" @bind="_filterCategoria">
+                        <option value="">Todas</option>
+                        @foreach (var cat in _categorias)
+                        {
+                            <option value="@cat">@cat</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2 col-sm-6">
+                    <label class="form-label small fw-semibold text-muted">Prioridad</label>
+                    <select class="form-select form-select-sm" @bind="_filterPrioridad">
+                        <option value="">Todas</option>
+                        @foreach (var prio in _prioridades)
+                        {
+                            <option value="@prio">@prio</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label small fw-semibold text-muted">Farmacia (PDV)</label>
+                    <select class="form-select form-select-sm" @bind="_filterPdvId">
+                        <option value="">Todas</option>
+                        @if (_farmacias != null)
+                        {
+                            @foreach (var f in _farmacias)
+                            {
+                                <option value="@f.Id">@f.Nombre (@f.Codigo)</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label small fw-semibold text-muted">Responsable</label>
+                    <select class="form-select form-select-sm" @bind="_filterResponsableId">
+                        <option value="">Todos</option>
+                        @if (_usuarios != null)
+                        {
+                            @foreach (var u in _usuarios)
+                            {
+                                <option value="@u.Id">@u.Nombre @u.Apellido (@u.Rol)</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label small fw-semibold text-muted">Desde</label>
+                    <input type="date" class="form-control form-control-sm" @bind="_filterDesde" />
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label small fw-semibold text-muted">Hasta</label>
+                    <input type="date" class="form-control form-control-sm" @bind="_filterHasta" />
+                </div>
+                <div class="col-md-6 d-flex align-items-end justify-content-end gap-2">
+                    <button class="btn btn-sm btn-outline-secondary px-3" @onclick="ClearFiltersAsync">
+                        <i class="bi bi-trash me-1"></i> Limpiar
+                    </button>
+                    <button class="btn btn-sm btn-primary px-4" @onclick="LoadNovedadesAsync">
+                        <i class="bi bi-funnel me-1"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error / Alerta -->
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="alert alert-danger shadow-sm d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-octagon-fill me-2 fs-5"></i>
+            <div>@_error</div>
+        </div>
+    }
+
+    <!-- Contenido Principal: Tabla a la Izquierda, Detalle a la Derecha -->
+    <div class="row g-4">
+        <!-- Tabla de Novedades -->
+        <div class="@(_selectedNovedad != null ? "col-lg-7" : "col-lg-12") transition-all">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0 text-dark">Listado de Novedades</h6>
+                    <span class="badge bg-light text-dark fw-normal">Total: @(_pagedResponse?.TotalItems ?? 0)</span>
+                </div>
+                <div class="card-body p-0">
+                    @if (_loadingList)
+                    {
+                        <div class="d-flex justify-content-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (_pagedResponse == null || !_pagedResponse.Items.Any())
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-chat-left-dots text-muted fs-1 mb-2 d-block"></i>
+                            <p class="text-muted mb-0">No se encontraron novedades con los filtros seleccionados.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm align-middle mb-0">
+                                <thead class="table-light text-muted uppercase font-monospace small">
+                                    <tr>
+                                        <th class="ps-3 py-2">Fecha</th>
+                                        <th>Título</th>
+                                        <th>Punto de Venta</th>
+                                        <th>Categoría</th>
+                                        <th>Prioridad</th>
+                                        <th>Estado</th>
+                                        <th>Límite</th>
+                                        <th class="pe-3"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in _pagedResponse.Items)
+                                    {
+                                        var esVencida = item.FechaSeguimiento < DateTime.Today && item.Estado != "Resuelta" && item.Estado != "Cerrada" && item.Estado != "Cancelada";
+                                        <tr class="@(esVencida ? "table-danger table-danger-highlight" : "") @(_selectedNovedad?.Id == item.Id ? "table-active fw-semibold border-start border-4 border-primary" : "") cursor-pointer"
+                                            @onclick="() => SelectNovedadAsync(item.Id)">
+                                            <td class="ps-3 text-muted small">@item.CreadoEn.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>
+                                                <div class="text-dark text-truncate" style="max-width: 180px;">@item.Titulo</div>
+                                                @if (esVencida)
+                                                {
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill small-badge">
+                                                        <i class="bi bi-alarm-fill me-1 animate-pulse"></i>Vencida
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td class="small">
+                                                <div class="fw-semibold">@GetPdvNombre(item.PdvId)</div>
+                                                <div class="text-muted small">@item.PdvId</div>
+                                            </td>
+                                            <td class="small">@item.Categoria</td>
+                                            <td>
+                                                <span class="badge bg-@GetPrioridadColor(item.Prioridad) bg-opacity-10 text-@GetPrioridadColor(item.Prioridad) rounded-pill">
+                                                    @item.Prioridad
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-@GetEstadoColor(item.Estado) rounded-pill text-white shadow-sm">
+                                                    @GetEstadoLabel(item.Estado)
+                                                </span>
+                                            </td>
+                                            <td class="small text-muted">@item.FechaSeguimiento.ToString("dd/MM/yyyy")</td>
+                                            <td class="pe-3 text-end">
+                                                @if (item.TotalImagenes > 0)
+                                                {
+                                                    <span class="badge bg-light text-muted rounded-pill" title="@item.TotalImagenes imágenes adjuntas">
+                                                        <i class="bi bi-image me-1"></i>@item.TotalImagenes
+                                                    </span>
+                                                }
+                                                <i class="bi bi-chevron-right text-muted small ms-1"></i>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+                <!-- Paginación -->
+                @if (_pagedResponse != null && _pagedResponse.TotalPaginas > 1)
+                {
+                    <div class="card-footer bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                        <span class="text-muted small">Página @_page de @_pagedResponse.TotalPaginas — @_pagedResponse.TotalItems total</span>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-xs btn-outline-secondary px-2" disabled="@(_page <= 1)" @onclick="PrevPageAsync">
+                                <i class="bi bi-chevron-left"></i> Anterior
+                            </button>
+                            <button class="btn btn-xs btn-outline-secondary px-2" disabled="@(_page >= _pagedResponse.TotalPaginas)" @onclick="NextPageAsync">
+                                Siguiente <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Panel de Detalle -->
+        @if (_selectedNovedad != null)
+        {
+            <div class="col-lg-5 transition-all">
+                <div class="card border-0 shadow-sm rounded-3">
+                    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-eye-fill text-primary me-2"></i>Detalle de Novedad</h6>
+                        <button class="btn-close" @onclick="CloseDetalle"></button>
+                    </div>
+
+                    @if (_loadingDetail)
+                    {
+                        <div class="card-body py-5 text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card-body pt-0 overflow-auto" style="max-height: 75vh;">
+                            <!-- Banner de Alerta Crítica Vencida -->
+                            @if (_selectedNovedad.FechaSeguimiento < DateTime.Today && _selectedNovedad.Estado != "Resuelta" && _selectedNovedad.Estado != "Cerrada" && _selectedNovedad.Estado != "Cancelada")
+                            {
+                                <div class="alert alert-danger bg-danger bg-opacity-10 border-0 text-danger d-flex align-items-center mb-3 py-2 rounded-3 small">
+                                    <i class="bi bi-alarm-fill me-2 fs-6"></i>
+                                    <div>Esta novedad ha superado la fecha límite de seguimiento asignada sin resolverse.</div>
+                                </div>
+                            }
+
+                            <!-- Info General -->
+                            <div class="mb-3">
+                                <span class="badge bg-light text-muted rounded-pill mb-1">ID: @_selectedNovedad.Id</span>
+                                <h5 class="fw-bold text-dark mb-1">@_selectedNovedad.Titulo</h5>
+                                <p class="text-secondary small mb-2">@_selectedNovedad.Descripcion</p>
+                                
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <span class="badge bg-light text-dark border"><i class="bi bi-tag-fill text-muted me-1"></i>@_selectedNovedad.Categoria</span>
+                                    <span class="badge bg-@GetPrioridadColor(_selectedNovedad.Prioridad) bg-opacity-10 text-@GetPrioridadColor(_selectedNovedad.Prioridad)"><i class="bi bi-flag-fill me-1"></i>Prioridad @_selectedNovedad.Prioridad</span>
+                                    <span class="badge bg-@GetEstadoColor(_selectedNovedad.Estado) rounded-pill text-white"><i class="bi bi-circle-fill me-1 small"></i>@GetEstadoLabel(_selectedNovedad.Estado)</span>
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" title="Anonimización activa aplicada"><i class="bi bi-shield-lock-fill me-1"></i>LOPDP Activa</span>
+                                </div>
+                            </div>
+
+                            <!-- Asistente de IA (Gemini) -->
+                            <div class="card border border-warning bg-warning bg-opacity-5 p-3 rounded-3 mb-3 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold text-dark mb-0 small"><i class="bi bi-magic text-warning me-1"></i> Asistente de IA (Gemini)</h6>
+                                    @if (_analyzingWithIA)
+                                    {
+                                        <span class="spinner-border spinner-border-sm text-warning" role="status"></span>
+                                    }
+                                </div>
+                                <p class="text-muted xsmall mb-2">Analiza la descripción en lenguaje natural de la novedad para validar la categoría, prioridad y título óptimos.</p>
+                                
+                                @if (_analisisResult != null)
+                                {
+                                    <div class="bg-white p-2 rounded border small mb-2 shadow-sm">
+                                        <div class="mb-1"><strong>Título sugerido:</strong> @_analisisResult.TituloSugerido</div>
+                                        <div class="mb-1"><strong>Categoría sugerida:</strong> <span class="badge bg-light text-dark border">@_analisisResult.Categoria</span></div>
+                                        <div class="mb-1"><strong>Prioridad sugerida:</strong> <span class="badge bg-light text-dark border">@_analisisResult.Prioridad</span></div>
+                                        <div class="text-muted xsmall"><strong>Justificación:</strong> @_analisisResult.Justificacion</div>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-warning btn-xs px-3 fw-bold text-dark" @onclick="AplicarSugerenciaIAAsync" disabled="@_applyingIA">
+                                            @if (_applyingIA)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            Aplicar Sugerencia
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-xs" @onclick="() => _analisisResult = null" disabled="@_applyingIA">
+                                            Descartar
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-outline-warning btn-sm w-100 fw-bold" @onclick="AnalizarConIAAsync" disabled="@_analyzingWithIA">
+                                        <i class="bi bi-cpu-fill me-1"></i> Analizar Descripción con Gemini
+                                    </button>
+                                }
+                            </div>
+
+                            <hr class="text-muted my-3 opacity-25" />
+
+                            <!-- Punto de Venta y Visita -->
+                            <div class="mb-3">
+                                <h7 class="fw-bold text-dark d-block mb-2">Ubicación y Contexto</h7>
+                                <div class="bg-light p-2 rounded-3 small">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <span class="text-muted d-block small">Punto de Venta</span>
+                                            <span class="fw-semibold">@GetPdvNombre(_selectedNovedad.PdvId)</span>
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="text-muted d-block small">ID Visita</span>
+                                            <span class="fw-semibold">@_selectedNovedad.VisitaId</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="text-muted my-3 opacity-25" />
+
+                            <!-- Asignación de Responsables (Formulario) -->
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h7 class="fw-bold text-dark mb-0">Asignación de Responsables</h7>
+                                    @if (_updatingResponsables)
+                                    {
+                                        <span class="spinner-border spinner-border-sm text-primary"></span>
+                                    }
+                                </div>
+                                <div class="bg-white p-3 border rounded-3 shadow-sm">
+                                    <EditForm Model="_responsablesForm" OnValidSubmit="SaveResponsablesAsync">
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold text-muted mb-1">Responsable Solución</label>
+                                            <select class="form-select form-select-sm" @bind="_responsablesForm.ResponsableSolucionId">
+                                                @if (_usuarios != null)
+                                                {
+                                                    @foreach (var u in _usuarios)
+                                                    {
+                                                        <option value="@u.Id">@u.Nombre @u.Apellido (@u.Rol)</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold text-muted mb-1">Responsable Seguimiento</label>
+                                            <select class="form-select form-select-sm" @bind="_responsablesForm.ResponsableSeguimientoId">
+                                                @if (_usuarios != null)
+                                                {
+                                                    @foreach (var u in _usuarios)
+                                                    {
+                                                        <option value="@u.Id">@u.Nombre @u.Apellido (@u.Rol)</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold text-muted mb-1">Fecha Límite Seguimiento</label>
+                                            <input type="date" class="form-control form-control-sm" @bind="_responsablesForm.FechaSeguimiento" />
+                                        </div>
+                                        <button class="btn btn-primary btn-sm w-100" type="submit" disabled="@_updatingResponsables">
+                                            <i class="bi bi-save me-1"></i> Guardar Asignaciones
+                                        </button>
+                                    </EditForm>
+                                </div>
+                            </div>
+
+                            <hr class="text-muted my-3 opacity-25" />
+
+                            <!-- Flujo y Cambio de Estado -->
+                            @if (_selectedNovedad.Estado != "Cerrada")
+                            {
+                                <div class="mb-4">
+                                    <h7 class="fw-bold text-dark d-block mb-2">Acciones de Estado</h7>
+                                    <div class="bg-light p-3 rounded-3 border">
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold text-muted mb-1">Nuevo Estado *</label>
+                                            <select class="form-select form-select-sm" @bind="_nuevoEstadoSelected">
+                                                <option value="">Selecciona un estado...</option>
+                                                @foreach (var e in GetEstadosPermitidos(_selectedNovedad.Estado))
+                                                {
+                                                    <option value="@e">@GetEstadoLabel(e)</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                             <label class="form-label small fw-semibold text-muted mb-1">Comentario * (Obligatorio)</label>
+                                             <textarea class="form-control form-control-sm" rows="2" placeholder="Especifica el motivo del cambio o información faltante..." @bind="_comentarioEstado"></textarea>
+                                             <div class="form-text xsmall text-muted mt-1"><i class="bi bi-shield-fill-check text-success me-1"></i>Gobernanza LOPDP: Este comentario será anonimizado automáticamente al guardarse.</div>
+                                         </div>
+                                        <button class="btn btn-warning btn-sm w-100 fw-bold" @onclick="ChangeStatusAsync" disabled="@(string.IsNullOrWhiteSpace(_nuevoEstadoSelected) || string.IsNullOrWhiteSpace(_comentarioEstado) || _updatingStatus)">
+                                            @if (_updatingStatus)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            <i class="bi bi-arrow-left-right me-1"></i> Aplicar Cambio de Estado
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <hr class="text-muted my-3 opacity-25" />
+                            }
+
+                            <!-- Adjuntos e Imágenes -->
+                            <div class="mb-4">
+                                <h7 class="fw-bold text-dark d-block mb-2">Archivos Adjuntos (Fotos, Videos y Documentos)</h7>
+                                @if (!_selectedNovedad.Imagenes.Any())
+                                {
+                                    <div class="text-center py-3 bg-light rounded-3">
+                                        <i class="bi bi-folder-symlink text-muted fs-4 mb-1 d-block"></i>
+                                        <span class="text-muted small">No hay archivos registrados para esta novedad.</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="row g-2">
+                                        @foreach (var img in _selectedNovedad.Imagenes)
+                                        {
+                                            <div class="col-4">
+                                                @if (EsImagen(img.NombreArchivo))
+                                                {
+                                                    <div class="card border bg-light h-100 overflow-hidden text-center relative-gallery">
+                                                        <!-- Imagen Clickable -->
+                                                        <img src="@GetImageSrc(img.Id, img.UrlImagen)" class="img-fluid cursor-zoom-in gallery-img" @onclick="() => OpenImageLightbox(img)" alt="@img.NombreArchivo" style="height: 90px; object-fit: cover;" />
+                                                        <div class="card-footer p-1 border-0 bg-white d-flex align-items-center justify-content-between">
+                                                            <span class="text-muted xsmall text-truncate" style="max-width: 60px;" title="@img.NombreArchivo">@img.NombreArchivo</span>
+                                                            <a href="@GetImageSrc(img.Id, img.UrlImagen)" download="@img.NombreArchivo" target="_blank" class="btn btn-link p-0 text-decoration-none text-primary" title="Descargar original">
+                                                                <i class="bi bi-download xsmall-icon"></i>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                }
+                                                else if (EsVideo(img.NombreArchivo))
+                                                {
+                                                    <div class="card border bg-dark text-white h-100 overflow-hidden text-center relative-gallery cursor-pointer" @onclick="() => OpenVideoLightbox(img)">
+                                                        <div class="d-flex flex-column align-items-center justify-content-center bg-black bg-opacity-70" style="height: 90px;">
+                                                            <i class="bi bi-play-btn-fill fs-3 text-warning"></i>
+                                                            <span class="xsmall text-white opacity-75 mt-1">Video</span>
+                                                        </div>
+                                                        <div class="card-footer p-1 border-0 bg-secondary bg-opacity-25 d-flex align-items-center justify-content-between">
+                                                            <span class="text-white xsmall text-truncate" style="max-width: 60px;" title="@img.NombreArchivo">@img.NombreArchivo</span>
+                                                            <a href="@GetImageSrc(img.Id, img.UrlImagen)" download="@img.NombreArchivo" target="_blank" class="btn btn-link p-0 text-decoration-none text-warning" @onclick:stopPropagation="true" title="Descargar video">
+                                                                <i class="bi bi-download xsmall-icon"></i>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="card border bg-light h-100 overflow-hidden text-center relative-gallery">
+                                                        <div class="d-flex flex-column align-items-center justify-content-center bg-secondary bg-opacity-10 text-secondary" style="height: 90px;">
+                                                            <i class="bi @(img.NombreArchivo.ToLower().EndsWith(".pdf") ? "bi-file-earmark-pdf-fill text-danger" : "bi-file-earmark-arrow-down-fill text-primary") fs-3"></i>
+                                                            <span class="xsmall text-muted mt-1">Documento</span>
+                                                        </div>
+                                                        <div class="card-footer p-1 border-0 bg-white d-flex align-items-center justify-content-between">
+                                                            <span class="text-muted xsmall text-truncate" style="max-width: 60px;" title="@img.NombreArchivo">@img.NombreArchivo</span>
+                                                            <a href="@GetImageSrc(img.Id, img.UrlImagen)" download="@img.NombreArchivo" target="_blank" class="btn btn-link p-0 text-decoration-none text-primary" title="Descargar documento">
+                                                                <i class="bi bi-download xsmall-icon"></i>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            <hr class="text-muted my-3 opacity-25" />
+
+                            <!-- Timeline / Historial -->
+                            <div class="mb-3">
+                                <h7 class="fw-bold text-dark d-block mb-3">Línea de Tiempo e Historial</h7>
+                                <div class="timeline-container ps-3 border-start">
+                                    <!-- Registro de Creación -->
+                                    <div class="timeline-item position-relative pb-3 mb-1">
+                                        <div class="timeline-icon bg-success bg-opacity-20 text-success rounded-circle position-absolute" style="left: -23px; top: 2px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;">
+                                            <i class="bi bi-circle-fill" style="font-size: 8px;"></i>
+                                        </div>
+                                        <div class="timeline-content ms-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="fw-bold small text-dark">Novedad Creada</span>
+                                                <span class="text-muted xsmall">@_selectedNovedad.CreadoEn.ToString("dd/MM/yyyy HH:mm")</span>
+                                            </div>
+                                            <p class="text-muted xsmall mb-0">Novedad inicializada en estado Abierta.</p>
+                                        </div>
+                                    </div>
+
+                                    @foreach (var hist in _selectedNovedad.Historial.OrderBy(h => h.CreadoEn))
+                                    {
+                                        <div class="timeline-item position-relative pb-3 mb-1">
+                                            <div class="timeline-icon bg-primary bg-opacity-20 text-primary rounded-circle position-absolute" style="left: -23px; top: 2px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;">
+                                                <i class="bi bi-arrow-left-right" style="font-size: 9px;"></i>
+                                            </div>
+                                            <div class="timeline-content ms-2">
+                                                <div class="d-flex justify-content-between">
+                                                    <span class="fw-bold small text-dark">Cambio a @GetEstadoLabel(hist.EstadoNuevo)</span>
+                                                    <span class="text-muted xsmall">@hist.CreadoEn.ToString("dd/MM/yyyy HH:mm")</span>
+                                                </div>
+                                                <span class="text-muted xsmall d-block mb-1">Por: @GetUsuarioNombre(hist.UsuarioId)</span>
+                                                @if (!string.IsNullOrWhiteSpace(hist.Comentario))
+                                                {
+                                                    <p class="bg-light p-2 rounded-2 text-dark xsmall mb-0 border">
+                                                        <i class="bi bi-chat-text text-muted me-1"></i>@hist.Comentario
+                                                    </p>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal / Lightbox de Imagen -->
+@if (_activeLightboxImage != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.85); z-index: 1050;">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-transparent border-0">
+                <div class="modal-header border-0 text-white p-2 d-flex justify-content-between align-items-center">
+                    <span class="small fw-semibold text-truncate" style="max-width: 70%;">@_activeLightboxImage.NombreArchivo (@((_activeLightboxImage.TamanoBytes / 1024.0).ToString("N1")) KB)</span>
+                    <div class="d-flex gap-2">
+                        <a href="@GetImageSrc(_activeLightboxImage.Id, _activeLightboxImage.UrlImagen)" download="@_activeLightboxImage.NombreArchivo" target="_blank" class="btn btn-outline-light btn-sm rounded-circle px-2" title="Descargar">
+                            <i class="bi bi-download"></i>
+                        </a>
+                        <button class="btn btn-outline-light btn-sm rounded-circle px-2" @onclick="CloseLightbox" title="Cerrar">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body p-0 text-center">
+                    <img src="@GetImageSrc(_activeLightboxImage.Id, _activeLightboxImage.UrlImagen)" class="img-fluid rounded-2 max-lightbox-img" alt="@_activeLightboxImage.NombreArchivo" style="max-height: 75vh;" />
+                    @if (_activeLightboxImage.Latitud.HasValue && _activeLightboxImage.Longitud.HasValue)
+                    {
+                        <div class="bg-dark bg-opacity-70 text-white rounded p-2 mt-2 inline-block mx-auto small text-center" style="max-width: 400px;">
+                            <i class="bi bi-geo-alt-fill text-danger me-1"></i> Coordenadas: @_activeLightboxImage.Latitud.Value.ToString("F6"), @_activeLightboxImage.Longitud.Value.ToString("F6")
+                            @if (_activeLightboxImage.TimestampCaptura.HasValue)
+                            {
+                                <span class="d-block text-muted xsmall">Fecha de captura: @_activeLightboxImage.TimestampCaptura.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal / Lightbox de Video -->
+@if (_activeLightboxVideo != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.85); z-index: 1050;">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-transparent border-0">
+                <div class="modal-header border-0 text-white p-2 d-flex justify-content-between align-items-center">
+                    <span class="small fw-semibold text-truncate" style="max-width: 70%;">@_activeLightboxVideo.NombreArchivo (@((_activeLightboxVideo.TamanoBytes / 1024.0).ToString("N1")) KB)</span>
+                    <div class="d-flex gap-2">
+                        <a href="@GetImageSrc(_activeLightboxVideo.Id, _activeLightboxVideo.UrlImagen)" download="@_activeLightboxVideo.NombreArchivo" target="_blank" class="btn btn-outline-light btn-sm rounded-circle px-2" title="Descargar">
+                            <i class="bi bi-download"></i>
+                        </a>
+                        <button class="btn btn-outline-light btn-sm rounded-circle px-2" @onclick="CloseVideoLightbox" title="Cerrar">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body p-0 text-center">
+                    <video src="@GetImageSrc(_activeLightboxVideo.Id, _activeLightboxVideo.UrlImagen)" controls autoplay class="img-fluid rounded-2" style="max-height: 70vh; max-width: 100%;">
+                        Tu navegador no soporta la reproducción de video HTML5.
+                    </video>
+                    @if (_activeLightboxVideo.Latitud.HasValue && _activeLightboxVideo.Longitud.HasValue)
+                    {
+                        <div class="bg-dark bg-opacity-70 text-white rounded p-2 mt-2 inline-block mx-auto small text-center" style="max-width: 400px;">
+                            <i class="bi bi-geo-alt-fill text-danger me-1"></i> Coordenadas: @_activeLightboxVideo.Latitud.Value.ToString("F6"), @_activeLightboxVideo.Longitud.Value.ToString("F6")
+                            @if (_activeLightboxVideo.TimestampCaptura.HasValue)
+                            {
+                                <span class="d-block text-muted xsmall">Fecha de captura: @_activeLightboxVideo.TimestampCaptura.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .cursor-zoom-in { cursor: zoom-in; }
+    .transition-all { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+    .animate-pulse { animation: pulse 2s infinite; }
+    @@keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
+    
+    /* Highlight de fila vencida */
+    .table-danger-highlight {
+        background-color: rgba(220, 53, 69, 0.08) !important;
+    }
+    .table-danger-highlight:hover {
+        background-color: rgba(220, 53, 69, 0.14) !important;
+    }
+    
+    /* Timeline styles */
+    .timeline-container {
+        border-color: #dee2e6 !important;
+    }
+    .timeline-icon {
+        border: 2px solid #fff;
+    }
+    
+    /* Gallery images */
+    .gallery-img {
+        transition: transform 0.2s ease-in-out;
+    }
+    .gallery-img:hover {
+        transform: scale(1.05);
+    }
+    
+    /* Small elements */
+    .small-badge {
+        font-size: 0.65rem;
+        padding: 0.2em 0.5em;
+    }
+    .xsmall {
+        font-size: 0.75rem;
+    }
+    .xsmall-icon {
+        font-size: 0.8rem;
+    }
+    .uppercase {
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+</style>
+
+@code {
+    [Inject] ApiClient Api { get; set; } = default!;
+
+    // Listas cargadas para selects/mapeos
+    private IEnumerable<FarmaciaModel>? _farmacias;
+    private IEnumerable<UsuarioModel>? _usuarios;
+
+    // Filtros de búsqueda
+    private string _filterEstado = string.Empty;
+    private string _filterCategoria = string.Empty;
+    private string _filterPrioridad = string.Empty;
+    private string _filterPdvId = string.Empty;
+    private string _filterResponsableId = string.Empty;
+    private DateTime? _filterDesde;
+    private DateTime? _filterHasta;
+
+    // Listados de datos
+    private NovedadesPagedResponse? _pagedResponse;
+    private NovedadModel? _selectedNovedad;
+    private NovedadImagenModel? _activeLightboxImage;
+    private NovedadImagenModel? _activeLightboxVideo;
+
+    // Variables de carga y estado
+    private int _page = 1;
+    private int _pageSize = 15;
+    private bool _loadingList;
+    private bool _loadingDetail;
+    private string? _error;
+
+    // Métricas/Contadores superiores
+    private int _cntAbiertas;
+    private int _cntEnProgreso;
+    private int _cntPendientesInfo;
+    private int _cntVencidas;
+
+    // Formulario de asignación de responsables
+    private ResponsablesForm _responsablesForm = new();
+    private bool _updatingResponsables;
+
+    // Cambio de estado
+    private string _nuevoEstadoSelected = string.Empty;
+    private string _comentarioEstado = string.Empty;
+    private bool _updatingStatus;
+
+    // Variables de IA
+    private bool _analyzingWithIA;
+    private bool _applyingIA;
+    private NovedadAnalisisResult? _analisisResult;
+
+    // Listas de categorías y prioridades estáticas coincidiendo con la App Móvil
+    private readonly string[] _categorias = { "Inventario", "Limpieza", "Exhibición", "Precio", "Equipamiento", "Otro" };
+    private readonly string[] _prioridades = { "Baja", "Media", "Alta", "Crítica" };
+
+    // URLs SAS de imágenes obtenidas dinámicamente
+    private Dictionary<string, string> _cachedImageSasUrls = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loadingList = true;
+        
+        // Cargar catálogos de soporte de forma asíncrona
+        var farmaciasTask = Api.GetFarmaciasResultAsync();
+        var usuariosTask = Api.GetUsuariosResultAsync();
+
+        await Task.WhenAll(farmaciasTask, usuariosTask);
+
+        _farmacias = farmaciasTask.Result.Data;
+        _usuarios = usuariosTask.Result.Data;
+
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        await LoadContadoresAsync();
+        await LoadNovedadesAsync();
+    }
+
+    private async Task LoadContadoresAsync()
+    {
+        // Cargar contadores solicitando a la API (o calculando sobre datos totales locales si no hay endpoints específicos)
+        // Por seguridad calculamos usando llamadas paginadas generales o a través de consultas rápidas.
+        // Dado que el controlador tiene GET /vencidas, podemos usarlo para la métrica de vencidas.
+        // También podemos hacer llamadas filtradas rápidas para las métricas.
+        
+        var tAbiertas = Api.GetNovedadesResultAsync(estado: "Abierta", tamano: 1);
+        var tEnProgreso = Api.GetNovedadesResultAsync(estado: "EnProgreso", tamano: 1);
+        var tPendientes = Api.GetNovedadesResultAsync(estado: "PendienteInformacion", tamano: 1);
+        var tVencidas = Api.GetNovedadesResultAsync(estado: "Vencida", tamano: 1);
+
+        await Task.WhenAll(tAbiertas, tEnProgreso, tPendientes, tVencidas);
+
+        _cntAbiertas = tAbiertas.Result.Data?.TotalItems ?? 0;
+        _cntEnProgreso = tEnProgreso.Result.Data?.TotalItems ?? 0;
+        _cntPendientesInfo = tPendientes.Result.Data?.TotalItems ?? 0;
+        
+        // Para vencidas de forma local también podemos evaluar Novedades vencidas reales desde endpoint /vencidas
+        // o si falla sumarle el filtro directo.
+        _cntVencidas = tVencidas.Result.Data?.TotalItems ?? 0;
+    }
+
+    private async Task LoadNovedadesAsync()
+    {
+        _loadingList = true;
+        _error = null;
+
+        var result = await Api.GetNovedadesResultAsync(
+            estado: _filterEstado,
+            categoria: _filterCategoria,
+            prioridad: _filterPrioridad,
+            pdvId: _filterPdvId,
+            responsableId: _filterResponsableId,
+            desde: _filterDesde,
+            hasta: _filterHasta,
+            pagina: _page,
+            tamano: _pageSize
+        );
+
+        if (result.Success)
+        {
+            _pagedResponse = result.Data;
+        }
+        else
+        {
+            _error = result.ErrorMessage ?? "Error desconocido al obtener las novedades.";
+        }
+
+        _loadingList = false;
+    }
+
+    private async Task SelectNovedadAsync(string id)
+    {
+        _loadingDetail = true;
+        _error = null;
+        _selectedNovedad = null;
+        _activeLightboxImage = null;
+        _activeLightboxVideo = null;
+        _nuevoEstadoSelected = string.Empty;
+        _comentarioEstado = string.Empty;
+
+        var result = await Api.GetNovedadResultAsync(id);
+        if (result.Success && result.Data != null)
+        {
+            _selectedNovedad = result.Data;
+            
+            // Inicializar formulario de asignación
+            _responsablesForm = new ResponsablesForm
+            {
+                ResponsableSolucionId = _selectedNovedad.ResponsableSolucionId,
+                ResponsableSeguimientoId = _selectedNovedad.ResponsableSeguimientoId,
+                FechaSeguimiento = _selectedNovedad.FechaSeguimiento
+            };
+
+            // Intentar pre-cargar las SAS URLs de las fotos de forma proactiva
+            _cachedImageSasUrls.Clear();
+            foreach (var img in _selectedNovedad.Imagenes)
+            {
+                var sasRes = await Api.GetSasUrlImagenAsync(_selectedNovedad.Id, img.Id);
+                if (sasRes.Success && !string.IsNullOrWhiteSpace(sasRes.Data))
+                {
+                    _cachedImageSasUrls[img.Id] = sasRes.Data;
+                }
+            }
+        }
+        else
+        {
+            _error = result.ErrorMessage ?? $"No se pudo obtener el detalle de la novedad {id}.";
+        }
+
+        _loadingDetail = false;
+    }
+
+    private async Task SaveResponsablesAsync()
+    {
+        if (_selectedNovedad == null) return;
+
+        _updatingResponsables = true;
+        _error = null;
+
+        var payload = new ActualizarNovedadModel(
+            _selectedNovedad.Titulo,
+            _selectedNovedad.Descripcion,
+            _selectedNovedad.Categoria,
+            _selectedNovedad.Prioridad,
+            _responsablesForm.ResponsableSolucionId,
+            _responsablesForm.ResponsableSeguimientoId,
+            _responsablesForm.FechaSeguimiento
+        );
+
+        var result = await Api.UpdateNovedadAsync(_selectedNovedad.Id, payload);
+        if (result.Success && result.Data != null)
+        {
+            _selectedNovedad = result.Data;
+            await LoadNovedadesAsync(); // Recargar la lista para reflejar cambios
+        }
+        else
+        {
+            _error = result.ErrorMessage ?? "Error al actualizar responsables.";
+        }
+
+        _updatingResponsables = false;
+    }
+
+    private async Task ChangeStatusAsync()
+    {
+        if (_selectedNovedad == null || string.IsNullOrWhiteSpace(_nuevoEstadoSelected) || string.IsNullOrWhiteSpace(_comentarioEstado)) return;
+
+        _updatingStatus = true;
+        _error = null;
+
+        var result = await Api.CambiarEstadoNovedadAsync(_selectedNovedad.Id, _nuevoEstadoSelected, _comentarioEstado);
+        if (result.Success && result.Data != null)
+        {
+            _selectedNovedad = result.Data;
+            _nuevoEstadoSelected = string.Empty;
+            _comentarioEstado = string.Empty;
+
+            // Recargar listados y contadores
+            await LoadContadoresAsync();
+            await LoadNovedadesAsync();
+        }
+        else
+        {
+            _error = result.ErrorMessage ?? "Error al cambiar el estado.";
+        }
+
+        _updatingStatus = false;
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        _filterEstado = string.Empty;
+        _filterCategoria = string.Empty;
+        _filterPrioridad = string.Empty;
+        _filterPdvId = string.Empty;
+        _filterResponsableId = string.Empty;
+        _filterDesde = null;
+        _filterHasta = null;
+        _page = 1;
+
+        await LoadNovedadesAsync();
+    }
+
+    private async Task PrevPageAsync()
+    {
+        if (_page > 1)
+        {
+            _page--;
+            await LoadNovedadesAsync();
+        }
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (_pagedResponse != null && _page < _pagedResponse.TotalPaginas)
+        {
+            _page++;
+            await LoadNovedadesAsync();
+        }
+    }
+
+    private void CloseDetalle()
+    {
+        _selectedNovedad = null;
+        _activeLightboxImage = null;
+        _activeLightboxVideo = null;
+        _analisisResult = null;
+    }
+
+    private async Task AnalizarConIAAsync()
+    {
+        if (_selectedNovedad == null || string.IsNullOrWhiteSpace(_selectedNovedad.Descripcion)) return;
+
+        _analyzingWithIA = true;
+        _error = null;
+        _analisisResult = null;
+
+        try
+        {
+            var result = await Api.AnalizarNovedadConIAAsync(_selectedNovedad.Descripcion);
+            if (result.Success && result.Data != null)
+            {
+                _analisisResult = result.Data;
+            }
+            else
+            {
+                _error = result.ErrorMessage ?? "Error al analizar la novedad con IA.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Error de comunicación con IA: {ex.Message}";
+        }
+        finally
+        {
+            _analyzingWithIA = false;
+        }
+    }
+
+    private async Task AplicarSugerenciaIAAsync()
+    {
+        if (_selectedNovedad == null || _analisisResult == null) return;
+
+        _applyingIA = true;
+        _error = null;
+
+        var payload = new ActualizarNovedadModel(
+            _analisisResult.TituloSugerido,
+            _selectedNovedad.Descripcion,
+            _analisisResult.Categoria,
+            _analisisResult.Prioridad,
+            _selectedNovedad.ResponsableSolucionId,
+            _selectedNovedad.ResponsableSeguimientoId,
+            _selectedNovedad.FechaSeguimiento
+        );
+
+        var result = await Api.UpdateNovedadAsync(_selectedNovedad.Id, payload);
+        if (result.Success && result.Data != null)
+        {
+            _selectedNovedad = result.Data;
+            _analisisResult = null;
+            await LoadNovedadesAsync(); // Recargar la lista
+        }
+        else
+        {
+            _error = result.ErrorMessage ?? "Error al aplicar los cambios sugeridos por la IA.";
+        }
+
+        _applyingIA = false;
+    }
+
+    // Helpers de Mapeo e Interfaz
+    private string GetPdvNombre(string pdvId)
+    {
+        var pdv = _farmacias?.FirstOrDefault(f => f.Id == pdvId || f.Codigo == pdvId);
+        return pdv?.Nombre ?? $"Código: {pdvId}";
+    }
+
+    private string GetUsuarioNombre(string usuarioId)
+    {
+        var usr = _usuarios?.FirstOrDefault(u => u.Id == usuarioId || u.Username == usuarioId);
+        return usr != null ? $"{usr.Nombre} {usr.Apellido}" : $"ID: {usuarioId}";
+    }
+
+    private string GetPrioridadColor(string prioridad)
+    {
+        return prioridad.ToLower() switch
+        {
+            "baja" => "secondary",
+            "media" => "primary",
+            "alta" => "warning",
+            "crítica" => "danger",
+            _ => "dark"
+        };
+    }
+
+    private string GetEstadoColor(string estado)
+    {
+        return estado.ToLower() switch
+        {
+            "abierta" => "info text-dark",
+            "enprogreso" or "en proceso" => "warning text-dark",
+            "resuelta" => "success",
+            "cerrada" => "secondary",
+            "reabierta" => "info",
+            "vencida" => "danger",
+            "cancelada" => "dark",
+            "pendienteinformacion" or "pendiente de subir información" => "danger",
+            _ => "dark"
+        };
+    }
+
+    private string GetEstadoLabel(string estado)
+    {
+        return estado.ToLower() switch
+        {
+            "abierta" => "Abierta",
+            "enprogreso" or "en proceso" => "En Proceso",
+            "resuelta" => "Resuelta",
+            "cerrada" => "Cerrada",
+            "reabierta" => "Reabierta",
+            "vencida" => "Vencida",
+            "cancelada" => "Cancelada",
+            "pendienteinformacion" or "pendiente de subir información" => "Pendiente Info",
+            _ => estado
+        };
+    }
+
+    private IEnumerable<string> GetEstadosPermitidos(string estadoActual)
+    {
+        return estadoActual.ToLower() switch
+        {
+            "abierta" => new[] { "EnProgreso", "Cancelada", "PendienteInformacion" },
+            "enprogreso" or "en proceso" => new[] { "Resuelta", "Cancelada" },
+            "pendienteinformacion" or "pendiente de subir información" => new[] { "EnProgreso", "Cancelada" },
+            "resuelta" => new[] { "Cerrada", "Reabierta" },
+            "reabierta" => new[] { "EnProgreso", "Cancelada" },
+            _ => Array.Empty<string>()
+        };
+    }
+
+    private string GetImageSrc(string imagenId, string fallbackUrl)
+    {
+        // Retornar la URL firmada (SAS) almacenada en caché si está disponible
+        if (_cachedImageSasUrls.TryGetValue(imagenId, out var sasUrl))
+        {
+            return sasUrl;
+        }
+        return fallbackUrl;
+    }
+
+    private void OpenImageLightbox(NovedadImagenModel img)
+    {
+        _activeLightboxImage = img;
+    }
+
+    private void CloseLightbox()
+    {
+        _activeLightboxImage = null;
+    }
+
+    private void OpenVideoLightbox(NovedadImagenModel img)
+    {
+        _activeLightboxVideo = img;
+    }
+
+    private void CloseVideoLightbox()
+    {
+        _activeLightboxVideo = null;
+    }
+
+    private bool EsImagen(string nombreArchivo)
+    {
+        var ext = System.IO.Path.GetExtension(nombreArchivo).ToLowerInvariant();
+        return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp";
+    }
+
+    private bool EsVideo(string nombreArchivo)
+    {
+        var ext = System.IO.Path.GetExtension(nombreArchivo).ToLowerInvariant();
+        return ext == ".mp4" || ext == ".mov" || ext == ".avi" || ext == ".mkv";
+    }
+
+    private sealed class ResponsablesForm
+    {
+        [Required]
+        public string ResponsableSolucionId { get; set; } = string.Empty;
+
+        [Required]
+        public string ResponsableSeguimientoId { get; set; } = string.Empty;
+
+        [Required]
+        public DateTime FechaSeguimiento { get; set; } = DateTime.Today.AddDays(3);
+    }
+}

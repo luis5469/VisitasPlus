@@ -1,0 +1,84 @@
+# ==========================================
+# Estándar Gitignore: VisitaPDV (Full-Stack)
+# .NET 10 / Blazor / Flutter / Android / iOS
+# ==========================================
+
+# --- Seguridad y Configuración Local ---
+*.local.json
+*.Local.json
+*.local.env
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+key.properties
+
+# --- .NET / C# / Visual Studio ---
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+[Aa]rchifacts/
+TestResults/
+*.resharper
+logs/
+**/logs/
+*.log
+
+# --- Flutter / Dart ---
+.dart_tool/
+.packages
+build/
+**/build/
+.flutter-plugins
+.flutter-plugins-dependencies
+app.*.symbols
+app.*.map.json
+
+# --- Android / Gradle ---
+.gradle/
+**/android/.gradle/
+**/android/local.properties
+**/android/captures/
+**/android/gradleBuild/
+**/android/app/build/
+**/android/app/release/
+*.apk
+*.aab
+
+# --- iOS / macOS / Xcode ---
+**/ios/Flutter/ephemeral/
+**/ios/.symlinks/
+**/ios/Pods/
+**/ios/Podfile.lock
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# --- Linux / Windows Desktop Desktop builds ---
+**/windows/flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+
+# --- IDEs y Editores ---
+.idea/
+*.iml
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# --- Sistema Operativo ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+*.Local.txt
+

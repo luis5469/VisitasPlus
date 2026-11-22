@@ -1,0 +1,71 @@
+@page "/login"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+
+<div class="d-flex justify-content-center align-items-center vh-100 bg-dark">
+    <div class="card shadow-lg" style="width:380px">
+        <div class="card-body p-4">
+            <h4 class="mb-1 fw-bold">VisitaPDV Admin</h4>
+            <p class="text-muted small mb-4">Ingrese sus credenciales</p>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="alert alert-danger py-2 small">@_error</div>
+            }
+
+            <EditForm Model="_form" OnValidSubmit="DoLogin">
+                <DataAnnotationsValidator />
+                <div class="mb-3">
+                    <label class="form-label small">Usuario o Email</label>
+                    <InputText @bind-Value="_form.User" class="form-control" placeholder="Ej: admin" />
+                    <ValidationMessage For="() => _form.User" class="text-danger small" />
+                </div>
+                <div class="mb-4">
+                    <label class="form-label small">Contraseña</label>
+                    <InputText @bind-Value="_form.Password" type="password" class="form-control" />
+                    <ValidationMessage For="() => _form.Password" class="text-danger small" />
+                </div>
+                <button type="submit" class="btn btn-primary w-100" disabled="@_loading">
+                    @(_loading ? "Ingresando..." : "Ingresar")
+                </button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject] ApiClient Api { get; set; } = default!;
+    [Inject] NavigationManager Nav { get; set; } = default!;
+    [Inject] AuthenticationStateProvider AuthProvider { get; set; } = default!;
+
+    private readonly LoginForm _form = new();
+    private string? _error;
+    private bool _loading;
+
+    private async Task DoLogin()
+    {
+        _loading = true;
+        _error   = null;
+        var result = await Api.LoginAsync(_form.User, _form.Password);
+        _loading = false;
+
+        if (!result.Success || result.Session is null)
+        {
+            _error = result.ErrorMessage ?? "No se pudo iniciar sesión.";
+            return;
+        }
+
+        // SignInAsync guarda en localStorage Y actualiza el estado en memoria
+        await ((AdminAuthStateProvider)AuthProvider).SignInAsync(result.Session);
+        Nav.NavigateTo("/");
+    }
+
+    private sealed class LoginForm
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "El usuario es obligatorio.")]
+        public string User     { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "La contraseña es obligatoria.")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

@@ -1,0 +1,63 @@
+@page "/roles"
+@attribute [Authorize(Roles = "Administrador")]
+
+<PageTitle>Roles — VisitaPDV Admin</PageTitle>
+
+<h4 class="fw-bold mb-3"><i class="bi bi-shield-check me-2"></i>Roles del Sistema</h4>
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center py-5"><div class="spinner-border text-primary"></div></div>
+}
+else if (_roles is null)
+{
+    <div class="alert alert-danger">@(_error ?? "No se pudieron cargar los roles.")</div>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var r in _roles ?? [])
+        {
+            <div class="col-md-4">
+                <div class="card h-100 border-@(r.Activo ? "success" : "secondary")">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">@r.Nombre</span>
+                        <span class="badge bg-@(r.Activo ? "success" : "secondary")">
+                            @(r.Activo ? "Activo" : "Inactivo")
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text text-muted small">@r.Descripcion</p>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                Creado: @r.CreatedAt.ToString("dd/MM/yyyy")
+                            </small>
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="/permisos" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-key me-1"></i> Ver Permisos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Inject] ApiClient Api { get; set; } = default!;
+    private IEnumerable<RolModel>? _roles;
+    private bool _loading;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        _error = null;
+        var result = await Api.GetRolesResultAsync();
+        _roles = result.Data;
+        _error = result.ErrorMessage;
+        _loading = false;
+    }
+}

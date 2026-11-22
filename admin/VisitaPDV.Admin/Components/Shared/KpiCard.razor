@@ -1,0 +1,30 @@
+@* Parámetros: Titulo, Valor, Icono (bi-*), Color (bootstrap), Subtitulo, Alerta *@
+
+<div class="card border-0 shadow-sm h-100">
+    <div class="card-body d-flex flex-column justify-content-between">
+        <div class="d-flex align-items-center mb-2">
+            <span class="text-@Color fs-3 me-2"><i class="bi @Icono"></i></span>
+            @if (Alerta)
+            {
+                <span class="ms-auto badge bg-danger rounded-pill">!</span>
+            }
+        </div>
+        <div>
+            <div class="fs-2 fw-bold text-@Color">@Valor</div>
+            <div class="text-muted small">@Titulo</div>
+            @if (!string.IsNullOrEmpty(Subtitulo))
+            {
+                <div class="text-muted" style="font-size:0.72rem">@Subtitulo</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Titulo    { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Valor     { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Icono     { get; set; } = "bi-circle";
+    [Parameter]                 public string Color     { get; set; } = "primary";
+    [Parameter]                 public string? Subtitulo { get; set; }
+    [Parameter]                 public bool   Alerta    { get; set; }
+}

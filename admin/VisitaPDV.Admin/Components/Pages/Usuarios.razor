@@ -1,0 +1,561 @@
+@page "/usuarios"
+@attribute [Authorize(Roles = "Administrador")]
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>Usuarios — VisitaPDV Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1 text-dark"><i class="bi bi-people me-2 text-primary"></i>Gestión de Usuarios</h4>
+        <div class="text-muted small">Administra los usuarios, sus roles, zonas asignadas e intentos de inicio de sesión.</div>
+    </div>
+    <div class="d-flex gap-2">
+        <input class="form-control" style="width: 250px;" placeholder="Buscar usuario..." @bind="_filtro" @bind:event="oninput" />
+        <button class="btn btn-primary px-3 shadow-sm d-flex align-items-center" @onclick="OpenCreateModal">
+            <i class="bi bi-person-plus me-2"></i> Nuevo Usuario
+        </button>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center align-items-center py-5">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+}
+else if (_usuarios is null)
+{
+    <div class="alert alert-danger shadow-sm">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        @(_error ?? "No se pudieron cargar los usuarios.")
+    </div>
+}
+else
+{
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 align-middle">
+                    <thead class="table-dark bg-dark">
+                        <tr>
+                            <th class="ps-4">Nombre Completo</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th>Zona</th>
+                            <th>Estado</th>
+                            <th>Último Login</th>
+                            <th>Intentos</th>
+                            <th class="pe-4 text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Filtrados.Any())
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-4 text-muted">
+                                    <i class="bi bi-search me-2 fs-4"></i> No se encontraron usuarios que coincidan con la búsqueda.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var u in Filtrados)
+                            {
+                                <tr>
+                                    <td class="ps-4 fw-semibold text-dark">@u.Nombre @u.Apellido</td>
+                                    <td class="text-muted">@@@u.Username</td>
+                                    <td>@u.Email</td>
+                                    <td>
+                                        <span class="badge rounded-pill bg-@(u.Rol switch {
+                                            "Administrador" => "primary",
+                                            "Supervisor" => "info text-dark",
+                                            _ => "secondary"
+                                        })">@u.Rol</span>
+                                    </td>
+                                    <td class="text-muted small">@(string.IsNullOrWhiteSpace(u.ZonaId) ? "—" : u.ZonaId)</td>
+                                    <td>
+                                        <span class="badge bg-@(u.Activo ? "success" : "danger") rounded-1 py-1.5 px-2.5">
+                                            <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;"></i>
+                                            @(u.Activo ? "Activo" : "Inactivo")
+                                        </span>
+                                    </td>
+                                    <td class="small text-muted">@(u.UltimoLogin.HasValue ? u.UltimoLogin.Value.ToString("dd/MM/yy HH:mm") : "—")</td>
+                                    <td class="@(u.IntentosFallidos > 0 ? "text-danger fw-bold" : "text-muted")">
+                                        @u.IntentosFallidos
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <div class="d-inline-flex gap-1">
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                    @onclick="() => OpenEditModal(u)"
+                                                    title="Editar usuario">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-warning"
+                                                    @onclick="() => OpenPasswordModal(u)"
+                                                    title="Cambiar contraseña">
+                                                <i class="bi bi-key"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-@(u.Activo ? "danger" : "success")"
+                                                    @onclick="() => ToggleActivo(u)"
+                                                    title="@(u.Activo ? "Desactivar" : "Activar")">
+                                                <i class="bi bi-@(u.Activo ? "person-slash" : "person-check")"></i>
+                                            </button>
+                                            @if (u.IntentosFallidos > 0)
+                                            {
+                                                <button class="btn btn-sm btn-outline-info"
+                                                        @onclick="() => ResetIntentos(u)"
+                                                        title="Resetear intentos fallidos">
+                                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="text-muted small mt-2">@Filtrados.Count() usuario(s) en total</div>
+}
+
+@if (!string.IsNullOrEmpty(_mensaje))
+{
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1060;">
+        <div class="toast show align-items-center text-white bg-success border-0 shadow-lg" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle-fill me-2"></i> @_mensaje
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" @onclick="() => _mensaje = null"></button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showUserModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content shadow-lg border-0 rounded-3">
+                <div class="modal-header bg-dark text-white rounded-top-3 border-0 py-3">
+                    <h5 class="modal-title fw-bold d-flex align-items-center">
+                        <i class="bi bi-@(string.IsNullOrEmpty(_editingUserId) ? "person-plus-fill" : "pencil-square") me-2 text-primary"></i>
+                        @(string.IsNullOrEmpty(_editingUserId) ? "Crear Nuevo Usuario" : "Editar Usuario")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseUserModal" aria-label="Close"></button>
+                </div>
+                <EditForm Model="_userForm" OnValidSubmit="SaveUserAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body p-4">
+                        @if (!string.IsNullOrEmpty(_modalError))
+                        {
+                            <div class="alert alert-danger py-2 px-3 small rounded-3 d-flex align-items-center mb-3">
+                                <i class="bi bi-exclamation-octagon-fill me-2 fs-6"></i> @_modalError
+                            </div>
+                        }
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-muted mb-1">Nombre</label>
+                                <InputText class="form-control" @bind-Value="_userForm.Nombre" placeholder="Nombre" />
+                                <ValidationMessage For="() => _userForm.Nombre" class="text-danger small" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-muted mb-1">Apellido</label>
+                                <InputText class="form-control" @bind-Value="_userForm.Apellido" placeholder="Apellido" />
+                                <ValidationMessage For="() => _userForm.Apellido" class="text-danger small" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-muted mb-1">Correo Electrónico</label>
+                                <InputText class="form-control" type="email" @bind-Value="_userForm.Email" placeholder="correo@visitapdv.com" />
+                                <ValidationMessage For="() => _userForm.Email" class="text-danger small" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-muted mb-1">Username (No editable)</label>
+                                <InputText class="form-control bg-light" @bind-Value="_userForm.Username" placeholder="username" disabled="@(!string.IsNullOrEmpty(_editingUserId))" />
+                                <ValidationMessage For="() => _userForm.Username" class="text-danger small" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-muted mb-1">Rol</label>
+                                <InputSelect class="form-select" @bind-Value="_userForm.Rol">
+                                    <option value="">Seleccione...</option>
+                                    @if (_roles is not null)
+                                    {
+                                        @foreach (var r in _roles)
+                                        {
+                                            <option value="@r.Nombre">@r.Nombre</option>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <option value="Visitador">Visitador</option>
+                                        <option value="Supervisor">Supervisor</option>
+                                        <option value="Administrador">Administrador</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _userForm.Rol" class="text-danger small" />
+                            </div>
+                            
+                            @if (string.IsNullOrEmpty(_editingUserId))
+                            {
+                                <div class="col-12">
+                                    <label class="form-label small fw-semibold text-muted mb-1">Contraseña</label>
+                                    <InputText class="form-control" type="password" @bind-Value="_userForm.Password" placeholder="Contraseña de acceso" />
+                                    <ValidationMessage For="() => _userForm.Password" class="text-danger small" />
+                                    <div class="text-muted small mt-1" style="font-size: 0.75rem;">
+                                        Mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número.
+                                    </div>
+                                </div>
+                            }
+                            
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-muted mb-1">Zona (Opcional)</label>
+                                <InputText class="form-control" @bind-Value="_userForm.ZonaId" placeholder="Ej. Norte, Sur, Centro" />
+                                <ValidationMessage For="() => _userForm.ZonaId" class="text-danger small" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-0 rounded-bottom-3 py-3 px-4 d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary px-3" @onclick="CloseUserModal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary px-4 d-flex align-items-center" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            }
+                            Guardar
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showPasswordModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
+        <div class="modal-dialog modal-dialog-centered modal-sm" role="document" style="max-width: 400px;">
+            <div class="modal-content shadow-lg border-0 rounded-3">
+                <div class="modal-header bg-dark text-white rounded-top-3 border-0 py-3">
+                    <h5 class="modal-title fw-bold d-flex align-items-center">
+                        <i class="bi bi-key-fill me-2 text-warning"></i>
+                        Cambiar Contraseña
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="ClosePasswordModal" aria-label="Close"></button>
+                </div>
+                <EditForm Model="_passwordForm" OnValidSubmit="SavePasswordAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body p-4">
+                        @if (!string.IsNullOrEmpty(_modalError))
+                        {
+                            <div class="alert alert-danger py-2 px-3 small rounded-3 d-flex align-items-center mb-3">
+                                <i class="bi bi-exclamation-octagon-fill me-2 fs-6"></i> @_modalError
+                            </div>
+                        }
+                        
+                        <div class="mb-3 p-3 bg-light rounded-3 text-center">
+                            <span class="text-muted small d-block">Usuario seleccionado:</span>
+                            <span class="fw-bold text-dark fs-6">@_selectedUsuario?.Nombre @_selectedUsuario?.Apellido</span>
+                            <span class="text-muted d-block small">@@@_selectedUsuario?.Username</span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-muted mb-1">Nueva Contraseña</label>
+                            <InputText class="form-control" type="password" @bind-Value="_passwordForm.Password" placeholder="Nueva contraseña" />
+                            <ValidationMessage For="() => _passwordForm.Password" class="text-danger small" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-muted mb-1">Confirmar Contraseña</label>
+                            <InputText class="form-control" type="password" @bind-Value="_passwordForm.ConfirmPassword" placeholder="Confirmar" />
+                            <ValidationMessage For="() => _passwordForm.ConfirmPassword" class="text-danger small" />
+                        </div>
+                        
+                        <div class="text-muted small" style="font-size: 0.75rem;">
+                            Mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número.
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-0 rounded-bottom-3 py-3 px-4 d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary px-3" @onclick="ClosePasswordModal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary px-4 d-flex align-items-center" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            }
+                            Actualizar
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Inject] ApiClient Api { get; set; } = default!;
+
+    private IEnumerable<UsuarioModel>? _usuarios;
+    private IEnumerable<RolModel>? _roles;
+    private string _filtro = string.Empty;
+    private bool _loading;
+    private string? _mensaje;
+    private string? _error;
+
+    // Modals state
+    private bool _showUserModal;
+    private bool _showPasswordModal;
+    private bool _saving;
+    private string? _modalError;
+    private string? _editingUserId;
+    private UsuarioModel? _selectedUsuario;
+
+    private UserForm _userForm = new();
+    private PasswordForm _passwordForm = new();
+
+    private IEnumerable<UsuarioModel> Filtrados => _usuarios?
+        .Where(u => string.IsNullOrEmpty(_filtro) ||
+            u.Nombre.Contains(_filtro, StringComparison.OrdinalIgnoreCase) ||
+            u.Apellido.Contains(_filtro, StringComparison.OrdinalIgnoreCase) ||
+            u.Username.Contains(_filtro, StringComparison.OrdinalIgnoreCase) ||
+            u.Email.Contains(_filtro, StringComparison.OrdinalIgnoreCase))
+        ?? [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading  = true;
+        _error = null;
+        await LoadDataAsync();
+        _loading  = false;
+    }
+
+    private async Task LoadDataAsync()
+    {
+        var result = await Api.GetUsuariosResultAsync();
+        _usuarios = result.Data;
+        _error = result.ErrorMessage;
+
+        var rolesResult = await Api.GetRolesResultAsync();
+        _roles = rolesResult.Data;
+    }
+
+    private async Task ToggleActivo(UsuarioModel u)
+    {
+        var ok = await Api.ToggleUsuarioActivoAsync(u.Id, !u.Activo);
+        if (ok)
+        {
+            _usuarios = await Api.GetUsuariosAsync();
+            _mensaje  = $"Usuario {u.Username} {(!u.Activo ? "activado" : "desactivado")}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResetIntentos(UsuarioModel u)
+    {
+        var ok = await Api.ResetIntentosFallidosAsync(u.Id);
+        if (ok)
+        {
+            _usuarios = await Api.GetUsuariosAsync();
+            _mensaje  = $"Intentos de {u.Username} reseteados";
+            StateHasChanged();
+        }
+    }
+
+    // Modal Control: User
+    private void OpenCreateModal()
+    {
+        _editingUserId = null;
+        _userForm = new UserForm();
+        _modalError = null;
+        _showUserModal = true;
+    }
+
+    private void OpenEditModal(UsuarioModel u)
+    {
+        _editingUserId = u.Id;
+        _userForm = new UserForm
+        {
+            Nombre = u.Nombre,
+            Apellido = u.Apellido,
+            Email = u.Email,
+            Username = u.Username,
+            Rol = u.Rol,
+            ZonaId = u.ZonaId
+        };
+        _modalError = null;
+        _showUserModal = true;
+    }
+
+    private void CloseUserModal()
+    {
+        _showUserModal = false;
+        _modalError = null;
+    }
+
+    private async Task SaveUserAsync()
+    {
+        _saving = true;
+        _modalError = null;
+
+        try
+        {
+            if (string.IsNullOrEmpty(_editingUserId))
+            {
+                // Create
+                if (string.IsNullOrWhiteSpace(_userForm.Password))
+                {
+                    _modalError = "La contraseña es obligatoria para un usuario nuevo.";
+                    _saving = false;
+                    return;
+                }
+                
+                var createModel = new CreateUsuarioModel(
+                    _userForm.Nombre,
+                    _userForm.Apellido,
+                    _userForm.Email,
+                    _userForm.Username,
+                    _userForm.Password,
+                    _userForm.Rol,
+                    _userForm.ZonaId
+                );
+
+                var result = await Api.CreateUsuarioAsync(createModel);
+                if (result.Success)
+                {
+                    _mensaje = "Usuario creado exitosamente.";
+                    _showUserModal = false;
+                    await LoadDataAsync();
+                }
+                else
+                {
+                    _modalError = result.ErrorMessage;
+                }
+            }
+            else
+            {
+                // Update
+                var updateModel = new UpdateUsuarioModel(
+                    _userForm.Nombre,
+                    _userForm.Apellido,
+                    _userForm.Email,
+                    _userForm.Username,
+                    _userForm.Rol,
+                    _userForm.ZonaId
+                );
+
+                var result = await Api.UpdateUsuarioAsync(_editingUserId, updateModel);
+                if (result.Success)
+                {
+                    _mensaje = "Usuario actualizado exitosamente.";
+                    _showUserModal = false;
+                    await LoadDataAsync();
+                }
+                else
+                {
+                    _modalError = result.ErrorMessage;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _modalError = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    // Modal Control: Password
+    private void OpenPasswordModal(UsuarioModel u)
+    {
+        _selectedUsuario = u;
+        _passwordForm = new PasswordForm();
+        _modalError = null;
+        _showPasswordModal = true;
+    }
+
+    private void ClosePasswordModal()
+    {
+        _showPasswordModal = false;
+        _selectedUsuario = null;
+        _modalError = null;
+    }
+
+    private async Task SavePasswordAsync()
+    {
+        if (_selectedUsuario is null) return;
+        _saving = true;
+        _modalError = null;
+
+        try
+        {
+            var model = new CambiarPasswordModel(_passwordForm.Password);
+            var result = await Api.CambiarPasswordAsync(_selectedUsuario.Id, model);
+            if (result.Success)
+            {
+                _mensaje = $"Contraseña de {_selectedUsuario.Username} actualizada.";
+                _showPasswordModal = false;
+                _selectedUsuario = null;
+                await LoadDataAsync();
+            }
+            else
+            {
+                _modalError = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            _modalError = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private sealed class UserForm
+    {
+        [Required(ErrorMessage = "El nombre es obligatorio")]
+        [StringLength(100, ErrorMessage = "El nombre no puede superar los 100 caracteres")]
+        public string Nombre { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El apellido es obligatorio")]
+        [StringLength(100, ErrorMessage = "El apellido no puede superar los 100 caracteres")]
+        public string Apellido { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El correo electrónico es obligatorio")]
+        [EmailAddress(ErrorMessage = "El formato de correo no es válido")]
+        [StringLength(255, ErrorMessage = "El correo no puede superar los 255 caracteres")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El nombre de usuario es obligatorio")]
+        [StringLength(100, ErrorMessage = "El username no puede superar los 100 caracteres")]
+        [RegularExpression(@"^[a-zA-Z0-9_\-\.]+$", ErrorMessage = "Solo se permiten letras, números, guiones, puntos o guiones bajos")]
+        public string Username { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El rol es obligatorio")]
+        public string Rol { get; set; } = string.Empty;
+
+        public string? Password { get; set; }
+
+        public string? ZonaId { get; set; }
+    }
+
+    private sealed class PasswordForm
+    {
+        [Required(ErrorMessage = "La contraseña es obligatoria")]
+        [MinLength(8, ErrorMessage = "La contraseña debe tener al menos 8 caracteres")]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$", ErrorMessage = "La contraseña debe contener al menos una mayúscula, una minúscula y un número")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Debe confirmar la contraseña")]
+        [Compare(nameof(Password), ErrorMessage = "Las contraseñas no coinciden")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}

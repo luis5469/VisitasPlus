@@ -1,0 +1,373 @@
+@page "/farmacias"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@implements IDisposable
+
+<PageTitle>Farmacias — VisitaPDV Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0"><i class="bi bi-shop me-2"></i>Administración de Farmacias</h4>
+    <span class="text-muted small">@((_farmacias?.Count() ?? 0)) registro(s)</span>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">
+                @(!string.IsNullOrEmpty(_editingId) ? "Editar farmacia" : "Nueva farmacia")
+            </div>
+            <div class="card-body">
+                <EditForm Model="_form" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger small" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Código</label>
+                        <InputText class="form-control" @bind-Value="_form.Codigo" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <InputText class="form-control" @bind-Value="_form.Nombre" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Dirección</label>
+                        <InputText class="form-control" @bind-Value="_form.Direccion" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ciudad</label>
+                        <InputText class="form-control" @bind-Value="_form.Ciudad" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Zona</label>
+                        <InputText class="form-control" @bind-Value="_form.Zona" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Responsable</label>
+                        <InputText class="form-control" @bind-Value="_form.Responsable" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Teléfono</label>
+                        <InputText class="form-control" @bind-Value="_form.Telefono" />
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label">Latitud</label>
+                            <InputNumber class="form-control" @bind-Value="_form.Latitud" @bind-Value:after="OnManualCoordsOrGeofenceChanged" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Longitud</label>
+                            <InputNumber class="form-control" @bind-Value="_form.Longitud" @bind-Value:after="OnManualCoordsOrGeofenceChanged" />
+                        </div>
+                    </div>
+
+                    <div class="mt-3 mb-3">
+                        <label class="form-label">Geofence (metros)</label>
+                        <InputNumber class="form-control" @bind-Value="_form.GeofenceMetros" @bind-Value:after="OnManualCoordsOrGeofenceChanged" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label d-flex justify-content-between">
+                            <span>Ubicación en Mapa</span>
+                            <span class="text-muted small">Arrastra el marcador o haz clic</span>
+                        </label>
+                        <div class="input-group mb-2">
+                            <input type="text" @bind="_searchAddress" class="form-control form-control-sm" placeholder="Buscar dirección (ej. Av. Shyris, Quito)..." onkeydown="if (event.key === 'Enter') { event.preventDefault(); }" @onkeyup="HandleSearchKeyUp" />
+                            <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="SearchAddressAsync">
+                                <i class="bi bi-search"></i> Buscar
+                            </button>
+                        </div>
+                        <div id="farmacia-map" style="height: 250px; border-radius: 4px; border: 1px solid #dee2e6; z-index: 1;"></div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" type="submit" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            @(!string.IsNullOrEmpty(_editingId) ? "Guardar cambios" : "Crear farmacia")
+                        </button>
+                        @if (!string.IsNullOrEmpty(_editingId))
+                        {
+                            <button class="btn btn-outline-secondary" type="button" @onclick="ResetForm">Cancelar</button>
+                        }
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        @if (_loading)
+        {
+            <div class="d-flex justify-content-center py-5"><div class="spinner-border text-primary"></div></div>
+        }
+        else if (_farmacias is null)
+        {
+            <div class="alert alert-warning">No se pudieron cargar las farmacias.</div>
+        }
+        else
+        {
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <table class="table table-sm table-hover mb-0 align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Ciudad</th>
+                                <th>Responsable</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var farmacia in _farmacias)
+                            {
+                                <tr>
+                                    <td>@farmacia.Codigo</td>
+                                    <td>
+                                        <div class="fw-semibold">@farmacia.Nombre</div>
+                                        <div class="small text-muted">@farmacia.Direccion</div>
+                                    </td>
+                                    <td>@farmacia.Ciudad</td>
+                                    <td>@(string.IsNullOrWhiteSpace(farmacia.Responsable) ? "—" : farmacia.Responsable)</td>
+                                    <td>
+                                        <span class="badge bg-@(farmacia.Activo ? "success" : "secondary")">
+                                            @(farmacia.Activo ? "Activa" : "Inactiva")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditFarmacia(farmacia)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-@(farmacia.Activo ? "danger" : "success")"
+                                                @onclick="() => ToggleActivoAsync(farmacia)">
+                                            <i class="bi bi-@(farmacia.Activo ? "toggle-off" : "toggle-on")"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div class="toast show align-items-center text-white bg-success">
+            <div class="d-flex">
+                <div class="toast-body">@_message</div>
+                <button class="btn-close btn-close-white me-2 m-auto" @onclick="() => _message = null"></button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Inject] ApiClient Api { get; set; } = default!;
+    [Inject] IJSRuntime Js { get; set; } = default!;
+
+    private string _searchAddress = string.Empty;
+    private DotNetObjectReference<Farmacias>? _selfReference;
+
+    private IEnumerable<FarmaciaModel>? _farmacias;
+    private FarmaciaForm _form = new();
+    private string? _editingId;
+    private bool _loading;
+    private bool _saving;
+    private string? _error;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFarmaciasAsync();
+    }
+
+    private async Task LoadFarmaciasAsync()
+    {
+        _loading = true;
+        _error = null;
+        var result = await Api.GetFarmaciasResultAsync();
+        _farmacias = result.Data?.OrderBy(f => f.Nombre).ToArray();
+        _error = result.ErrorMessage;
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        _error = null;
+
+        var payload = new UpsertFarmaciaModel(
+            _form.Codigo,
+            _form.Nombre,
+            _form.Direccion,
+            _form.Ciudad,
+            _form.Zona,
+            _form.Responsable,
+            _form.Telefono,
+            _form.Latitud,
+            _form.Longitud,
+            _form.GeofenceMetros);
+
+        if (!string.IsNullOrEmpty(_editingId))
+        {
+            var result = await Api.UpdateFarmaciaAsync(_editingId, payload);
+            _error = result.ErrorMessage;
+            if (result.Success)
+            {
+                _message = "Farmacia actualizada.";
+                ResetForm();
+                await LoadFarmaciasAsync();
+            }
+        }
+        else
+        {
+            var result = await Api.CreateFarmaciaAsync(payload);
+            _error = result.ErrorMessage;
+            if (result.Success)
+            {
+                _message = "Farmacia creada.";
+                ResetForm();
+                await LoadFarmaciasAsync();
+            }
+        }
+
+        _saving = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _selfReference = DotNetObjectReference.Create(this);
+            await Js.InvokeVoidAsync("farmaciaMap.init", _selfReference, _form.Latitud, _form.Longitud, _form.GeofenceMetros);
+        }
+    }
+
+    private async Task UpdateMapAsync()
+    {
+        await Js.InvokeVoidAsync("farmaciaMap.update", _form.Latitud, _form.Longitud, _form.GeofenceMetros);
+    }
+
+    private async Task OnManualCoordsOrGeofenceChanged()
+    {
+        await UpdateMapAsync();
+    }
+
+    private async Task SearchAddressAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(_searchAddress))
+        {
+            await Js.InvokeVoidAsync("farmaciaMap.searchAddress", _searchAddress);
+        }
+    }
+
+    private async Task HandleSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchAddressAsync();
+        }
+    }
+
+    [JSInvokable]
+    public void UpdateCoordinates(decimal lat, decimal lng)
+    {
+        _form.Latitud = lat;
+        _form.Longitud = lng;
+        StateHasChanged();
+    }
+
+    private async Task EditFarmacia(FarmaciaModel farmacia)
+    {
+        _editingId = farmacia.Id;
+        _form = new FarmaciaForm
+        {
+            Codigo = farmacia.Codigo,
+            Nombre = farmacia.Nombre,
+            Direccion = farmacia.Direccion,
+            Ciudad = farmacia.Ciudad,
+            Zona = farmacia.Zona,
+            Responsable = farmacia.Responsable,
+            Telefono = farmacia.Telefono,
+            Latitud = farmacia.Latitud,
+            Longitud = farmacia.Longitud,
+            GeofenceMetros = farmacia.GeofenceMetros,
+        };
+        _error = null;
+        await UpdateMapAsync();
+    }
+
+    private async Task ToggleActivoAsync(FarmaciaModel farmacia)
+    {
+        var result = await Api.ToggleFarmaciaActivoAsync(farmacia.Id, !farmacia.Activo);
+        _error = result.ErrorMessage;
+        if (result.Success)
+        {
+            _message = $"Farmacia {(farmacia.Activo ? "desactivada" : "activada")}.";
+            await LoadFarmaciasAsync();
+        }
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _form = new FarmaciaForm();
+        _error = null;
+        _ = UpdateMapAsync();
+    }
+
+    public void Dispose()
+    {
+        _selfReference?.Dispose();
+    }
+
+    private sealed class FarmaciaForm
+    {
+        [Required]
+        [StringLength(20)]
+        public string Codigo { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(200)]
+        public string Nombre { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(300)]
+        public string Direccion { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string Ciudad { get; set; } = string.Empty;
+
+        [StringLength(100)]
+        public string? Zona { get; set; }
+
+        [StringLength(150)]
+        public string? Responsable { get; set; }
+
+        [StringLength(20)]
+        public string? Telefono { get; set; }
+
+        [Range(typeof(decimal), "-90", "90")]
+        public decimal Latitud { get; set; }
+
+        [Range(typeof(decimal), "-180", "180")]
+        public decimal Longitud { get; set; }
+
+        [Range(10, 5000)]
+        public int GeofenceMetros { get; set; } = 100;
+    }
+}

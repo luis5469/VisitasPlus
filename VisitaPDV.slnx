@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/backend/" />
+  <Folder Name="/backend/src/">
+    <Project Path="backend/src/VisitaPDV.API/VisitaPDV.API.csproj" />
+    <Project Path="backend/src/VisitaPDV.Application/VisitaPDV.Application.csproj" />
+    <Project Path="backend/src/VisitaPDV.Domain/VisitaPDV.Domain.csproj" />
+    <Project Path="backend/src/VisitaPDV.Infrastructure/VisitaPDV.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/backend/tests/">
+    <Project Path="backend/tests/VisitaPDV.Tests/VisitaPDV.Tests.csproj" />
+  </Folder>
+  <Folder Name="/admin/">
+    <Project Path="admin/VisitaPDV.Admin/VisitaPDV.Admin.csproj" />
+  </Folder>
+</Solution>

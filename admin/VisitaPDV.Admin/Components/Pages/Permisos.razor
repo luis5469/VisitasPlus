@@ -1,0 +1,76 @@
+@page "/permisos"
+@attribute [Authorize(Roles = "Administrador")]
+
+<PageTitle>Permisos — VisitaPDV Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold"><i class="bi bi-key me-2"></i>Permisos del Sistema</h4>
+    <input class="form-control w-25" placeholder="Filtrar módulo/acción..."
+           @bind="_filtro" @bind:event="oninput" />
+</div>
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center py-5"><div class="spinner-border text-primary"></div></div>
+}
+else if (_permisos is null)
+{
+    <div class="alert alert-danger">@(_error ?? "No se pudieron cargar los permisos.")</div>
+}
+else
+{
+    @foreach (var modulo in Agrupados)
+    {
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white fw-bold">
+                <i class="bi bi-grid me-1"></i> @modulo.Key
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>Nombre</th><th>Acción</th><th>Descripción</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in modulo)
+                        {
+                            <tr>
+                                <td><code>@p.Nombre</code></td>
+                                <td><span class="badge bg-secondary">@p.Accion</span></td>
+                                <td class="text-muted small">@p.Descripcion</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    <div class="text-muted small">@Filtrados.Count() permiso(s)</div>
+}
+
+@code {
+    [Inject] ApiClient Api { get; set; } = default!;
+    private IEnumerable<PermisoModel>? _permisos;
+    private string _filtro = string.Empty;
+    private bool _loading;
+    private string? _error;
+
+    private IEnumerable<PermisoModel> Filtrados => _permisos?
+        .Where(p => string.IsNullOrEmpty(_filtro) ||
+            p.Modulo.Contains(_filtro, StringComparison.OrdinalIgnoreCase) ||
+            p.Accion.Contains(_filtro, StringComparison.OrdinalIgnoreCase) ||
+            p.Nombre.Contains(_filtro, StringComparison.OrdinalIgnoreCase))
+        ?? [];
+
+    private IEnumerable<IGrouping<string, PermisoModel>> Agrupados =>
+        Filtrados.GroupBy(p => p.Modulo).OrderBy(g => g.Key);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading  = true;
+        _error = null;
+        var result = await Api.GetPermisosResultAsync();
+        _permisos = result.Data;
+        _error = result.ErrorMessage;
+        _loading  = false;
+    }
+}

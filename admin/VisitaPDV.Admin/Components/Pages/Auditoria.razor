@@ -1,0 +1,110 @@
+@page "/auditoria"
+@attribute [Authorize(Roles = "Administrador")]
+
+<PageTitle>Auditoría — VisitaPDV Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold"><i class="bi bi-journal-text me-2"></i>Registro de Auditoría</h4>
+    <div class="d-flex gap-2">
+        <select class="form-select form-select-sm w-auto" @bind="_soloErrores">
+            <option value="false">Todos</option>
+            <option value="true">Solo errores</option>
+        </select>
+        <button class="btn btn-sm btn-outline-primary" @onclick="Load">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center py-5"><div class="spinner-border text-primary"></div></div>
+}
+else if (_result is null)
+{
+    <div class="alert alert-danger">@(_error ?? "No se pudo cargar la auditoría.")</div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover mb-0 font-monospace small">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Fecha</th><th>Módulo</th><th>Acción</th>
+                        <th>Entidad</th><th>IP</th><th>Estado</th><th>Error</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in Filtrados)
+                    {
+                        <tr class="@(!a.Exitoso ? "table-danger" : "")">
+                            <td>@a.CreatedAt.ToString("dd/MM HH:mm:ss")</td>
+                            <td>@a.Modulo</td>
+                            <td>@a.Accion</td>
+                            <td>@(a.EntidadAfectada ?? "—")</td>
+                            <td>@(a.IpAddress ?? "—")</td>
+                            <td>
+                                <span class="badge bg-@(a.Exitoso ? "success" : "danger")">
+                                    @(a.Exitoso ? "OK" : "ERROR")
+                                </span>
+                            </td>
+                            <td class="text-danger small">@(a.MensajeError ?? string.Empty)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Paginación -->
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <span class="text-muted small">
+            Página @_page de @_result.TotalPages — @_result.TotalCount registros
+        </span>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-secondary" disabled="@(_page <= 1)"
+                    @onclick="PrevPage">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" disabled="@(_page >= _result.TotalPages)"
+                    @onclick="NextPage">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Inject] ApiClient Api { get; set; } = default!;
+    private PagedResult<AuditoriaModel>? _result;
+    private bool _loading;
+    private int _page = 1;
+    private bool _soloErrores;
+    private string? _error;
+
+    private IEnumerable<AuditoriaModel> Filtrados =>
+        (_result?.Items ?? []).Where(a => !_soloErrores || !a.Exitoso);
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        _loading = true;
+        _error = null;
+        var result = await Api.GetAuditoriaResultAsync(_page);
+        _result = result.Data;
+        _error = result.ErrorMessage;
+        _loading = false;
+    }
+
+    private async Task PrevPage()
+    {
+        if (_page > 1) { _page--; await Load(); }
+    }
+
+    private async Task NextPage()
+    {
+        if (_result is not null && _page < _result.TotalPages) { _page++; await Load(); }
+    }
+}

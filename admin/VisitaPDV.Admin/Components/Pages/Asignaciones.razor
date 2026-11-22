@@ -1,0 +1,270 @@
+@page "/asignaciones"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>Asignaciones — VisitaPDV Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0"><i class="bi bi-calendar-check me-2"></i>Asignación de Farmacias</h4>
+    <button class="btn btn-outline-secondary btn-sm" @onclick="LoadDataAsync">
+        <i class="bi bi-arrow-clockwise me-1"></i> Recargar
+    </button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Nueva asignación</div>
+            <div class="card-body">
+                <EditForm Model="_form" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger small" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Usuario</label>
+                        <InputSelect class="form-select" @bind-Value="_form.UsuarioId">
+                            <option value="">Seleccione un usuario</option>
+                            @foreach (var usuario in UsuariosDisponibles)
+                            {
+                                <option value="@usuario.Id">@usuario.Nombre @usuario.Apellido (@usuario.Username)</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Farmacia</label>
+                        <InputSelect class="form-select" @bind-Value="_form.FarmaciaId">
+                            <option value="">Seleccione una farmacia</option>
+                            @foreach (var farmacia in FarmaciasDisponibles)
+                            {
+                                <option value="@farmacia.Id">@farmacia.Codigo - @farmacia.Nombre</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Fecha planeada</label>
+                        <InputDate class="form-control" @bind-Value="_form.FechaPlaneada" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones</label>
+                        <InputTextArea class="form-control" @bind-Value="_form.Observaciones" />
+                    </div>
+
+                    <button class="btn btn-primary" type="submit" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Guardar asignación
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Filtros</span>
+                <span class="text-muted small">@((_asignaciones?.Count() ?? 0)) asignación(es)</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Desde</label>
+                        <InputDate class="form-control" @bind-Value="_desde" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Hasta</label>
+                        <InputDate class="form-control" @bind-Value="_hasta" />
+                    </div>
+                    <div class="col-md-4 d-flex gap-2">
+                        <button class="btn btn-outline-primary" @onclick="LoadAsignacionesAsync">Filtrar</button>
+                        <button class="btn btn-outline-secondary" @onclick="ResetFiltros">Limpiar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center py-5"><div class="spinner-border text-primary"></div></div>
+}
+else if (_asignaciones is null)
+{
+    <div class="alert alert-warning">No se pudieron cargar las asignaciones.</div>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover mb-0 align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Usuario</th>
+                        <th>Farmacia</th>
+                        <th>Observaciones</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var asignacion in _asignaciones)
+                    {
+                        <tr>
+                            <td>@asignacion.FechaPlaneada.ToString("dd/MM/yyyy")</td>
+                            <td>@asignacion.NombreUsuario</td>
+                            <td>
+                                <div class="fw-semibold">@asignacion.NombreFarmacia</div>
+                                <div class="small text-muted">@asignacion.CodigoFarmacia</div>
+                            </td>
+                            <td>@(string.IsNullOrWhiteSpace(asignacion.Observaciones) ? "—" : asignacion.Observaciones)</td>
+                            <td>
+                                <span class="badge bg-@(asignacion.Completada ? "success" : "warning text-dark")">
+                                    @(asignacion.Completada ? "Completada" : "Pendiente")
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(asignacion)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div class="toast show align-items-center text-white bg-success">
+            <div class="d-flex">
+                <div class="toast-body">@_message</div>
+                <button class="btn-close btn-close-white me-2 m-auto" @onclick="() => _message = null"></button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Inject] ApiClient Api { get; set; } = default!;
+
+    private IEnumerable<AsignacionFarmaciaModel>? _asignaciones;
+    private IEnumerable<UsuarioModel> _usuarios = [];
+    private IEnumerable<FarmaciaModel> _farmacias = [];
+    private AsignacionForm _form = new();
+    private DateTime? _desde = DateTime.Today;
+    private DateTime? _hasta = DateTime.Today.AddDays(7);
+    private bool _loading;
+    private bool _saving;
+    private string? _error;
+    private string? _message;
+
+    private IEnumerable<UsuarioModel> UsuariosDisponibles => _usuarios
+        .Where(u => u.Activo)
+        .OrderBy(u => u.Apellido)
+        .ThenBy(u => u.Nombre);
+
+    private IEnumerable<FarmaciaModel> FarmaciasDisponibles => _farmacias
+        .Where(f => f.Activo)
+        .OrderBy(f => f.Nombre);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var usuariosResult = await Api.GetUsuariosResultAsync();
+        var farmaciasResult = await Api.GetFarmaciasResultAsync();
+        var asignacionesResult = await Api.GetAsignacionesResultAsync(_desde, _hasta);
+
+        _usuarios = usuariosResult.Data?.ToArray() ?? [];
+        _farmacias = farmaciasResult.Data?.ToArray() ?? [];
+        _asignaciones = asignacionesResult.Data?.ToArray();
+        _error = usuariosResult.ErrorMessage ?? farmaciasResult.ErrorMessage ?? asignacionesResult.ErrorMessage;
+
+        _loading = false;
+    }
+
+    private async Task LoadAsignacionesAsync()
+    {
+        _loading = true;
+        var result = await Api.GetAsignacionesResultAsync(_desde, _hasta);
+        _asignaciones = result.Data?.ToArray();
+        _error = result.ErrorMessage;
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        _error = null;
+
+        var result = await Api.CreateAsignacionAsync(new CreateAsignacionModel(
+            _form.FarmaciaId,
+            _form.UsuarioId,
+            _form.FechaPlaneada,
+            _form.Observaciones));
+
+        _error = result.ErrorMessage;
+        if (result.Success)
+        {
+            _message = "Asignación creada.";
+            _form = new AsignacionForm();
+            await LoadAsignacionesAsync();
+        }
+
+        _saving = false;
+    }
+
+    private async Task DeleteAsync(AsignacionFarmaciaModel asignacion)
+    {
+        var result = await Api.DeleteAsignacionAsync(asignacion.Id);
+        _error = result.ErrorMessage;
+        if (result.Success)
+        {
+            _message = "Asignación eliminada.";
+            await LoadAsignacionesAsync();
+        }
+    }
+
+    private async Task ResetFiltros()
+    {
+        _desde = null;
+        _hasta = null;
+        await LoadAsignacionesAsync();
+    }
+
+    private sealed class AsignacionForm
+    {
+        [Required(ErrorMessage = "Seleccione un usuario.")]
+        public string UsuarioId { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Seleccione una farmacia.")]
+        public string FarmaciaId { get; set; } = string.Empty;
+
+        [Required]
+        public DateTime FechaPlaneada { get; set; } = DateTime.Today;
+
+        [StringLength(500)]
+        public string? Observaciones { get; set; }
+    }
+}

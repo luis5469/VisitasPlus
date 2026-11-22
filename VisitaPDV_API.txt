@@ -1,0 +1,5 @@
+Nombre del Proyecto: VisitaPDV
+Clave de API: YOUR_GEMINI_API_KEY
+Número de Proyecto: 597410017075
+Fecha de Registro: 2026-07-15
+Plataforma: Google AI Studio (Gemini API)

@@ -1,0 +1,262 @@
+@page "/"
+@attribute [Authorize]
+@implements IDisposable
+@inject IJSRuntime JS
+
+<PageTitle>Dashboard — VisitaPDV Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0 fw-bold"><i class="bi bi-speedometer2 me-2"></i>Dashboard Ejecutivo</h4>
+    <div class="d-flex gap-2 align-items-center">
+        <input type="date" class="form-control form-control-sm"
+               value="@(_desde?.ToString("yyyy-MM-dd"))"
+               @onchange="e => _desde = DateTime.TryParse(e.Value?.ToString(), out var d) ? d : _desde" />
+        <span class="text-muted">–</span>
+        <input type="date" class="form-control form-control-sm"
+               value="@(_hasta?.ToString("yyyy-MM-dd"))"
+               @onchange="e => _hasta = DateTime.TryParse(e.Value?.ToString(), out var d) ? d : _hasta" />
+        <button class="btn btn-sm btn-primary" @onclick="Load">
+            <i class="bi bi-arrow-clockwise"></i> Cargar
+        </button>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-download"></i> Exportar
+            </button>
+            <ul class="dropdown-menu">
+                <li><button class="dropdown-item" @onclick='() => Export("pdf")'>PDF</button></li>
+                <li><button class="dropdown-item" @onclick='() => Export("excel")'>Excel</button></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary"></div>
+    </div>
+}
+else if (_data is null)
+{
+    <div class="alert alert-danger">@(_error ?? "No se pudo cargar el dashboard.")</div>
+}
+else
+{
+    var k = _data.Kpis;
+    var usandoPdvsPlaceholder = UsaPdvsPlaceholder();
+
+    if (usandoPdvsPlaceholder)
+    {
+        <div class="alert alert-warning d-flex align-items-start gap-2 mb-4">
+            <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+            <div>
+                <div class="fw-semibold">Catálogo de PDV no disponible en la base actual</div>
+                <div class="small mb-0">Las alertas muestran identificadores temporales porque el backend no puede resolver nombres reales de PDV con el esquema SQL Server actualmente cargado.</div>
+            </div>
+        </div>
+    }
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4 col-xl-2">
+            <KpiCard Titulo="Novedades Abiertas" Valor="@k.NovedadesAbiertas.ToString()"
+                     Icono="bi-exclamation-circle" Color="primary" />
+        </div>
+        <div class="col-md-4 col-xl-2">
+            <KpiCard Titulo="Novedades Vencidas" Valor="@k.NovedadesVencidas.ToString()"
+                     Icono="bi-alarm" Color="danger" Alerta="@(k.NovedadesVencidas > 0)" />
+        </div>
+        <div class="col-md-4 col-xl-2">
+            <KpiCard Titulo="Visitas Ejecutadas" Valor="@k.VisitasEjecutadas.ToString()"
+                     Subtitulo=@($"de {k.TotalAgendado} agendadas")
+                     Icono="bi-shop" Color="success" />
+        </div>
+        <div class="col-md-4 col-xl-2">
+            <KpiCard Titulo="Cumplimiento" Valor=@($"{k.PorcentajeCumplimientoAgenda:N1}%")
+                     Icono="bi-check2-circle"
+                     Color="@(k.PorcentajeCumplimientoAgenda >= 80 ? "success" : k.PorcentajeCumplimientoAgenda >= 50 ? "warning" : "danger")" />
+        </div>
+        <div class="col-md-4 col-xl-2">
+            <KpiCard Titulo="T.Resolución Prom." Valor=@($"{k.TiempoResolucionPromedioHoras:N1}h")
+                     Icono="bi-hourglass-split" Color="purple" />
+        </div>
+        <div class="col-md-4 col-xl-2">
+            <KpiCard Titulo="Total Novedades" Valor="@k.TotalNovedades.ToString()"
+                     Subtitulo="en el período" Icono="bi-list-ul" Color="teal" />
+        </div>
+    </div>
+
+    <!-- Alertas -->
+    @if (_data.AlertasActivas.Any())
+    {
+        <div class="card border-danger mb-4">
+            <div class="card-header bg-danger text-white fw-bold">
+                <i class="bi bi-bell-fill me-1"></i> Alertas Activas (@_data.AlertasActivas.Count())
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Novedad</th><th>Categoría</th><th>Prioridad</th>
+                            <th>PDV</th><th>Fecha Seguimiento</th><th>Días Vencida</th><th>Responsable</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var a in _data.AlertasActivas)
+                        {
+                            <tr>
+                                <td>@a.Titulo</td>
+                                <td>@a.Categoria</td>
+                                <td><span class="badge bg-danger">@a.Prioridad</span></td>
+                                <td>
+                                    @if (EsPdvPlaceholder(a.NombrePdv))
+                                    {
+                                        <span class="text-muted">@a.NombrePdv</span>
+                                    }
+                                    else
+                                    {
+                                        @a.NombrePdv
+                                    }
+                                </td>
+                                <td>@a.FechaSeguimiento.ToString("dd/MM/yy")</td>
+                                <td class="text-danger fw-bold">@a.DiasVencida d</td>
+                                <td>@a.ResponsableNombre</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <!-- Incidencias por Categoría -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold"><i class="bi bi-bar-chart me-1"></i> Incidencias por Categoría</div>
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr><th>Categoría</th><th>Total</th><th>Abiertas</th><th>Resueltas</th><th>Vencidas</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in _data.IncidenciasPorCategoria)
+                    {
+                        <tr>
+                            <td>@c.Categoria</td>
+                            <td>@c.Total</td>
+                            <td>@c.Abiertas</td>
+                            <td class="text-success">@c.Resueltas</td>
+                            <td class="text-danger">@c.Vencidas</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Eficiencia por Visitador -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold"><i class="bi bi-person-lines-fill me-1"></i> Eficiencia por Visitador</div>
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Visitador</th><th>Visitas</th><th>Agendadas</th>
+                        <th>Cumpl.%</th><th>Novedades</th><th>Resueltas</th><th>T.Prom(min)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var v in _data.EficienciaPorVisitador)
+                    {
+                        <tr>
+                            <td>@v.NombreCompleto</td>
+                            <td>@v.VisitasCompletadas</td>
+                            <td>@v.VisitasAgendadas</td>
+                            <td>
+                                <span class="badge bg-@(v.PorcentajeCumplimiento >= 80 ? "success" : v.PorcentajeCumplimiento >= 50 ? "warning" : "danger")">
+                                    @v.PorcentajeCumplimiento.ToString("N1")%
+                                </span>
+                            </td>
+                            <td>@v.NovedadesRegistradas</td>
+                            <td>@v.NovedadesResueltas</td>
+                            <td>@v.TiempoPromedioVisitaMinutos.ToString("N1")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Auto-refresh indicator -->
+    <div class="text-muted small text-end">
+        <i class="bi bi-arrow-repeat me-1"></i> Auto-refresh cada 5 min.
+        Próximo en @_nextRefreshSecs s
+    </div>
+}
+
+@code {
+    [Inject] ApiClient Api { get; set; } = default!;
+
+    private DashboardResumenModel? _data;
+    private bool _loading;
+    private string? _error;
+    private DateTime? _desde = DateTime.UtcNow.AddDays(-30);
+    private DateTime? _hasta = DateTime.UtcNow;
+
+    // Auto-refresh
+    private System.Threading.Timer? _timer;
+    private int _nextRefreshSecs = 300;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+        _timer = new System.Threading.Timer(async _ =>
+        {
+            _nextRefreshSecs--;
+            if (_nextRefreshSecs <= 0)
+            {
+                _nextRefreshSecs = 300;
+                await InvokeAsync(async () =>
+                {
+                    await Load();
+                    StateHasChanged();
+                });
+            }
+            else
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }, null, 1000, 1000);
+    }
+
+    private async Task Load()
+    {
+        _loading = true;
+        _error = null;
+        var result = await Api.GetDashboardResultAsync(_desde, _hasta);
+        _data = result.Data;
+        _error = result.ErrorMessage;
+        _loading = false;
+    }
+
+    private async Task Export(string formato)
+    {
+        var bytes = await Api.ExportDashboardAsync(formato, _desde, _hasta);
+        if (bytes is null) return;
+        var contentType = formato == "pdf"
+            ? "application/pdf"
+            : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        var ext      = formato == "pdf" ? "pdf" : "xlsx";
+        var fileName = $"dashboard_{DateTime.Now:yyyyMMdd}.{ext}";
+        var base64   = Convert.ToBase64String(bytes);
+        await JS.InvokeVoidAsync("downloadFile", fileName, contentType, base64);
+    }
+
+    private bool UsaPdvsPlaceholder() =>
+        _data?.AlertasActivas.Any(a => EsPdvPlaceholder(a.NombrePdv)) == true;
+
+    private static bool EsPdvPlaceholder(string? nombrePdv) =>
+        !string.IsNullOrWhiteSpace(nombrePdv) &&
+        nombrePdv.StartsWith("Sin catalogo PDV", StringComparison.OrdinalIgnoreCase);
+
+    public void Dispose() => _timer?.Dispose();
+}
