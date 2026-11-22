@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using FluentValidation;
-using Microsoft.Data.SqlClient;
+using System.Data.Common;
 using VisitaPDV.Application.Common.Models;
 using VisitaPDV.Domain.Exceptions;
 
@@ -44,8 +44,8 @@ public sealed class GlobalExceptionMiddleware(
                 logger.LogWarning(exception, "Acceso no autorizado: {Message}", exception.Message);
                 break;
 
-            case SqlException sqlException when IsMissingObjectException(sqlException):
-                logger.LogWarning(sqlException, "Objeto SQL faltante: {Message}", sqlException.Message);
+            case DbException dbException when IsMissingObjectException(dbException):
+                logger.LogWarning(dbException, "Objeto de base de datos faltante: {Message}", dbException.Message);
                 break;
 
             default:
@@ -74,9 +74,9 @@ public sealed class GlobalExceptionMiddleware(
                 HttpStatusCode.Unauthorized,
                 ApiResponse.Fail("No autorizado.")),
 
-            SqlException sqlException when IsMissingObjectException(sqlException) => (
+            DbException dbException when IsMissingObjectException(dbException) => (
                 HttpStatusCode.ServiceUnavailable,
-                ApiResponse.Fail(BuildMissingObjectMessage(sqlException))),
+                ApiResponse.Fail(BuildMissingObjectMessage(dbException))),
 
             _ => (
                 HttpStatusCode.InternalServerError,
@@ -92,11 +92,13 @@ public sealed class GlobalExceptionMiddleware(
         return context.Response.WriteAsync(json);
     }
 
-    private static bool IsMissingObjectException(SqlException exception)
-        => exception.Message.Contains("El nombre de objeto", StringComparison.OrdinalIgnoreCase)
-            && exception.Message.Contains("no es válido", StringComparison.OrdinalIgnoreCase);
+    private static bool IsMissingObjectException(DbException exception)
+        => exception.Message.Contains("does not exist", StringComparison.OrdinalIgnoreCase)
+           || exception.Message.Contains("no existe", StringComparison.OrdinalIgnoreCase)
+           || (exception.Message.Contains("El nombre de objeto", StringComparison.OrdinalIgnoreCase)
+               && exception.Message.Contains("no es válido", StringComparison.OrdinalIgnoreCase));
 
-    private static string BuildMissingObjectMessage(SqlException exception)
+    private static string BuildMissingObjectMessage(DbException exception)
     {
         var objectName = TryExtractObjectName(exception.Message);
         return objectName is null

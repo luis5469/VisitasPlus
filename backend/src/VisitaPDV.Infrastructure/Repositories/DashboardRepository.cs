@@ -28,12 +28,16 @@ public sealed class DashboardRepository(ApplicationDbContext context) : IDashboa
                 n.Estado != NovedadStatus.Cerrada, ct);
 
         // Tiempo promedio de resolución (horas) para novedades resueltas/cerradas en el rango
-        var tiempoPromedio = await context.Novedades
+        var novedadesTiempos = await context.Novedades
             .Where(n =>
                 (n.Estado == NovedadStatus.Resuelta || n.Estado == NovedadStatus.Cerrada) &&
                 n.UpdatedAt >= desde && n.UpdatedAt <= hasta)
-            .Select(n => EF.Functions.DateDiffHour(n.CreatedAt, n.UpdatedAt))
-            .AverageAsync(x => (double?)x, ct) ?? 0;
+            .Select(n => new { n.CreatedAt, n.UpdatedAt })
+            .ToListAsync(ct);
+
+        var tiempoPromedio = novedadesTiempos.Count > 0
+            ? novedadesTiempos.Average(n => (n.UpdatedAt - n.CreatedAt).TotalHours)
+            : 0;
 
         // Visitas ejecutadas en el rango
         var visitasEjecutadas = await context.Visitas

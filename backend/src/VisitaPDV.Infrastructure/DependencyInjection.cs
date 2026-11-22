@@ -18,9 +18,9 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services, IConfiguration config)
     {
-        // EF Core
+        // EF Core (PostgreSQL)
         services.AddDbContext<ApplicationDbContext>(opts =>
-            opts.UseSqlServer(
+            opts.UseNpgsql(
                 config.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
