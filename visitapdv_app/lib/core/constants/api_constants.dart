@@ -1,7 +1,7 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl = 'http://10.0.2.2:5284/api'; // emulador Android → localhost:5284 (HTTP)
+  static const String baseUrl = 'https://visitas.digitalexpressplus.com/api'; // Producción VPS (HTTPS)
   static const bool isTestingMode = true; // Define si el entorno es pruebas o producción
   static const Duration connectTimeout = Duration(seconds: 8);
   static const Duration receiveTimeout = Duration(seconds: 8);
