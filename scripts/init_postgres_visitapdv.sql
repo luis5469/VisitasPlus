@@ -244,7 +244,7 @@ INSERT INTO "Usuarios" (
 )
 VALUES (
     'USR-ADMIN1', 'Administrador', 'Sistema', 'admin@visitapdv.com', 'admin',
-    '$2a$12$Nq9v7bH6uQ5W2H6qQe8kxeW/6W6uQ5W2H6qQe8kxeW/6W6uQ5W2H6', -- Hash BCrypt de Admin@2024!
+    '$2a$12$0Ew0hvGxEUHPfOePqGbU.uqcsLc0Snqq3n9aDQ8xtrT5/X6SgO8pi', -- Hash BCrypt válido de Admin@2024!
     'Administrador', 'ZONA-MAT', NULL, TRUE, FALSE, NULL, 0, NULL, NULL,
     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'SYSTEM', NULL
 )
