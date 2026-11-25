@@ -15,8 +15,8 @@ public sealed class GetDashboardResumenQueryHandler(
     public async Task<DashboardResumenDto> Handle(
         GetDashboardResumenQuery request, CancellationToken cancellationToken)
     {
-        var desde = request.Desde ?? DateTime.UtcNow.AddDays(-30);
-        var hasta = request.Hasta ?? DateTime.UtcNow;
+        var desde = DateTime.SpecifyKind(request.Desde ?? DateTime.UtcNow.AddDays(-30), DateTimeKind.Utc);
+        var hasta = DateTime.SpecifyKind(request.Hasta ?? DateTime.UtcNow, DateTimeKind.Utc);
 
         var cacheKey = $"dashboard:resumen:{desde:yyyyMMdd}:{hasta:yyyyMMdd}";
         var cached   = await cache.GetAsync<DashboardResumenDto>(cacheKey, cancellationToken);
@@ -54,8 +54,8 @@ public sealed class ExportDashboardQueryHandler(
     public async Task<ExportResultDto> Handle(
         ExportDashboardQuery request, CancellationToken cancellationToken)
     {
-        var desde = request.Desde ?? DateTime.UtcNow.AddDays(-30);
-        var hasta = request.Hasta ?? DateTime.UtcNow;
+        var desde = DateTime.SpecifyKind(request.Desde ?? DateTime.UtcNow.AddDays(-30), DateTimeKind.Utc);
+        var hasta = DateTime.SpecifyKind(request.Hasta ?? DateTime.UtcNow, DateTimeKind.Utc);
 
         var kpis = await dashboardRepo.GetKpisAsync(desde, hasta, cancellationToken);
         var categorias = await dashboardRepo.GetIncidenciasPorCategoriaAsync(desde, hasta, cancellationToken);

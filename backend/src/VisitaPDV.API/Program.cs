@@ -4,6 +4,8 @@ using VisitaPDV.API.Middleware;
 using VisitaPDV.Application;
 using VisitaPDV.Infrastructure;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateBootstrapLogger();

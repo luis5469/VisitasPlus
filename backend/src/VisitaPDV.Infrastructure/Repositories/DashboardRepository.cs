@@ -13,6 +13,8 @@ public sealed class DashboardRepository(ApplicationDbContext context) : IDashboa
     public async Task<DashboardKpiDto> GetKpisAsync(
         DateTime desde, DateTime hasta, CancellationToken ct = default)
     {
+        desde = DateTime.SpecifyKind(desde, DateTimeKind.Utc);
+        hasta = DateTime.SpecifyKind(hasta, DateTimeKind.Utc);
         // Novedades abiertas (en cualquier estado no terminal)
         var novedadesAbiertas = await context.Novedades
             .CountAsync(n =>
