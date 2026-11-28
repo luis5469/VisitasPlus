@@ -1,56 +1,83 @@
 @inherits LayoutComponentBase
 
 <div class="d-flex" style="min-height:100vh">
-    <!-- Sidebar -->
-    <nav class="d-flex flex-column bg-dark text-white p-3" style="width:220px;min-width:220px">
-        <div class="mb-4">
-            <span class="fw-bold fs-5">&#128203; VisitaPDV</span>
-            <div class="text-muted small">Panel Admin</div>
+    <!-- Sidebar Global -->
+    <nav class="d-flex flex-column vpdv-sidebar text-white p-3 shadow" style="width:240px;min-width:240px">
+        <div class="mb-4 px-2 pt-2">
+            <div class="d-flex align-items-center gap-2">
+                <div class="bg-primary rounded-3 d-flex align-items-center justify-content-center text-white" style="width:36px;height:36px;background-color:var(--color-primary)!important;">
+                    <i class="bi bi-clipboard2-pulse fs-5"></i>
+                </div>
+                <div>
+                    <span class="fw-bold fs-6 text-white d-block lh-1">VisitaPDV</span>
+                    <span class="text-secondary small" style="font-size:0.75rem;color:#94A3B8!important;">Panel Ejecutivo</span>
+                </div>
+            </div>
         </div>
 
-        <NavLink class="nav-link text-white mb-1" href="/" Match="NavLinkMatch.All">
-            <i class="bi bi-speedometer2 me-2"></i> Dashboard
-        </NavLink>
-        <AuthorizeView Roles="Administrador">
-            <NavLink class="nav-link text-white mb-1" href="/usuarios">
-                <i class="bi bi-people me-2"></i> Usuarios
+        <div class="nav flex-column gap-1">
+            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                <i class="bi bi-speedometer2"></i>
+                <span>Dashboard</span>
             </NavLink>
-        </AuthorizeView>
-        <NavLink class="nav-link text-white mb-1" href="/farmacias">
-            <i class="bi bi-shop me-2"></i> Farmacias
-        </NavLink>
-        <NavLink class="nav-link text-white mb-1" href="/asignaciones">
-            <i class="bi bi-calendar-check me-2"></i> Asignaciones
-        </NavLink>
-        <NavLink class="nav-link text-white mb-1" href="/novedades">
-            <i class="bi bi-chat-left-text me-2"></i> Novedades
-        </NavLink>
-        <AuthorizeView Roles="Administrador">
-            <NavLink class="nav-link text-white mb-1" href="/roles">
-                <i class="bi bi-shield-check me-2"></i> Roles
+            <AuthorizeView Roles="Administrador">
+                <NavLink class="nav-link" href="/usuarios">
+                    <i class="bi bi-people"></i>
+                    <span>Usuarios</span>
+                </NavLink>
+            </AuthorizeView>
+            <NavLink class="nav-link" href="/farmacias">
+                <i class="bi bi-shop"></i>
+                <span>Puntos de venta</span>
             </NavLink>
-            <NavLink class="nav-link text-white mb-1" href="/permisos">
-                <i class="bi bi-key me-2"></i> Permisos
+            <NavLink class="nav-link" href="/asignaciones">
+                <i class="bi bi-calendar-check"></i>
+                <span>Agenda de visitas</span>
             </NavLink>
-            <NavLink class="nav-link text-white mb-1" href="/auditoria">
-                <i class="bi bi-journal-text me-2"></i> Auditoría
+            <NavLink class="nav-link" href="/novedades">
+                <i class="bi bi-chat-left-text"></i>
+                <span>Novedades</span>
             </NavLink>
-        </AuthorizeView>
+            <AuthorizeView Roles="Administrador">
+                <div class="my-2 border-top border-secondary border-opacity-25"></div>
+                <NavLink class="nav-link" href="/roles">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Roles</span>
+                </NavLink>
+                <NavLink class="nav-link" href="/permisos">
+                    <i class="bi bi-key"></i>
+                    <span>Permisos</span>
+                </NavLink>
+                <NavLink class="nav-link" href="/auditoria">
+                    <i class="bi bi-journal-text"></i>
+                    <span>Auditoría</span>
+                </NavLink>
+            </AuthorizeView>
+        </div>
 
-        <div class="mt-auto">
+        <div class="mt-auto pt-3 border-top border-secondary border-opacity-25 px-1">
             <AuthorizeView>
                 <Authorized>
-                    <div class="text-muted small mb-1">@context.User.Identity?.Name</div>
-                    <button class="btn btn-outline-light btn-sm w-100" @onclick="Logout">
-                        <i class="bi bi-box-arrow-left me-1"></i> Salir
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <div class="rounded-circle bg-secondary bg-opacity-25 text-white d-flex align-items-center justify-content-center small fw-bold" style="width:32px;height:32px;">
+                            @(context.User.Identity?.Name?.Length > 0 ? context.User.Identity.Name[0].ToString().ToUpperInvariant() : "U")
+                        </div>
+                        <div class="text-truncate" style="max-width: 140px;">
+                            <div class="text-white small fw-semibold text-truncate">@context.User.Identity?.Name</div>
+                            <div class="text-secondary" style="font-size:0.7rem;color:#94A3B8!important;">En línea</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-logout btn-sm w-100 d-flex align-items-center justify-content-center gap-2" @onclick="Logout">
+                        <i class="bi bi-box-arrow-left"></i>
+                        <span>Cerrar sesión</span>
                     </button>
                 </Authorized>
             </AuthorizeView>
         </div>
     </nav>
 
-    <!-- Main -->
-    <main class="flex-grow-1 p-4 bg-light overflow-auto">
+    <!-- Main Content Area -->
+    <main class="flex-grow-1 p-4 bg-app overflow-auto" style="background-color: var(--color-bg-app);">
         @Body
     </main>
 </div>
@@ -62,7 +89,6 @@
 
     private async Task Logout()
     {
-        // Invalida token en el servidor y limpia localStorage + memoria
         await Api.LogoutAsync();
         await ((AdminAuthStateProvider)AuthProvider).SignOutAsync();
         Nav.NavigateTo("/login");

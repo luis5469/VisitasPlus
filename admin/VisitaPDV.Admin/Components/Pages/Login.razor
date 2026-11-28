@@ -2,31 +2,76 @@
 @layout EmptyLayout
 @attribute [AllowAnonymous]
 
-<div class="d-flex justify-content-center align-items-center vh-100 bg-dark">
-    <div class="card shadow-lg" style="width:380px">
-        <div class="card-body p-4">
-            <h4 class="mb-1 fw-bold">VisitaPDV Admin</h4>
-            <p class="text-muted small mb-4">Ingrese sus credenciales</p>
+<div class="d-flex justify-content-center align-items-center vh-100" style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);">
+    <div class="card border-0 shadow-lg" style="width: 420px; border-radius: 14px; background: #FFFFFF;">
+        <div class="card-body p-4 p-sm-5">
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-3 mb-3 text-white shadow-sm" style="width: 48px; height: 48px; background-color: var(--color-primary, #5B21B6);">
+                    <i class="bi bi-clipboard2-pulse fs-4"></i>
+                </div>
+                <h4 class="mb-1 fw-bold text-dark">VisitaPDV Admin</h4>
+                <p class="text-secondary small mb-0">Gestión Operativa y Monitoreo de Visitas</p>
+            </div>
 
             @if (!string.IsNullOrEmpty(_error))
             {
-                <div class="alert alert-danger py-2 small">@_error</div>
+                <div class="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-3 rounded-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                    <div>@_error</div>
+                </div>
             }
 
             <EditForm Model="_form" OnValidSubmit="DoLogin">
                 <DataAnnotationsValidator />
+                
                 <div class="mb-3">
-                    <label class="form-label small">Usuario o Email</label>
-                    <InputText @bind-Value="_form.User" class="form-control" placeholder="Ej: admin" />
-                    <ValidationMessage For="() => _form.User" class="text-danger small" />
+                    <label class="form-label">Usuario o Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted border-end-0">
+                            <i class="bi bi-person"></i>
+                        </span>
+                        <InputText @bind-Value="_form.User" class="form-control border-start-0 ps-0" placeholder="Ej: admin" />
+                    </div>
+                    <ValidationMessage For="() => _form.User" class="text-danger small mt-1" />
                 </div>
+
                 <div class="mb-4">
-                    <label class="form-label small">Contraseña</label>
-                    <InputText @bind-Value="_form.Password" type="password" class="form-control" />
-                    <ValidationMessage For="() => _form.Password" class="text-danger small" />
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label class="form-label mb-0">Contraseña</label>
+                        <a href="javascript:void(0)" class="text-decoration-none small text-muted hover-underline" style="font-size: 0.8rem;" @onclick="ShowForgotNotice">
+                            ¿Olvidaste tu contraseña?
+                        </a>
+                    </div>
+                    <div class="input-group mt-1">
+                        <span class="input-group-text bg-light text-muted border-end-0">
+                            <i class="bi bi-shield-lock"></i>
+                        </span>
+                        <InputText @bind-Value="_form.Password" type="@(_showPassword ? "text" : "password")" class="form-control border-start-0 border-end-0 px-0" placeholder="••••••••" />
+                        <button class="btn btn-outline-secondary border-start-0" type="button" style="border-color: var(--color-border);" @onclick="() => _showPassword = !_showPassword" title="@(_showPassword ? "Ocultar" : "Mostrar") contraseña">
+                            <i class="bi @(_showPassword ? "bi-eye-slash" : "bi-eye") text-muted"></i>
+                        </button>
+                    </div>
+                    <ValidationMessage For="() => _form.Password" class="text-danger small mt-1" />
                 </div>
-                <button type="submit" class="btn btn-primary w-100" disabled="@_loading">
-                    @(_loading ? "Ingresando..." : "Ingresar")
+
+                @if (_forgotNotice)
+                {
+                    <div class="alert alert-info py-2 px-3 small mb-3 rounded-3">
+                        <i class="bi bi-info-circle me-1"></i> Comunícate con el Administrador del Sistema para restablecer tus credenciales de acceso.
+                    </div>
+                }
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" disabled="@_loading">
+                    @if (_loading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Iniciando sesión...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-box-arrow-in-right me-1"></i>
+                        <span>Ingresar</span>
+                    }
                 </button>
             </EditForm>
         </div>
@@ -41,6 +86,13 @@
     private readonly LoginForm _form = new();
     private string? _error;
     private bool _loading;
+    private bool _showPassword = false;
+    private bool _forgotNotice = false;
+
+    private void ShowForgotNotice()
+    {
+        _forgotNotice = true;
+    }
 
     private async Task DoLogin()
     {
@@ -51,11 +103,10 @@
 
         if (!result.Success || result.Session is null)
         {
-            _error = result.ErrorMessage ?? "No se pudo iniciar sesión.";
+            _error = result.ErrorMessage ?? "No se pudo iniciar sesión. Verifique sus credenciales.";
             return;
         }
 
-        // SignInAsync guarda en localStorage Y actualiza el estado en memoria
         await ((AdminAuthStateProvider)AuthProvider).SignInAsync(result.Session);
         Nav.NavigateTo("/");
     }

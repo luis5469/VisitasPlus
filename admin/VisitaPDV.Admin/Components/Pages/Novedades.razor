@@ -17,51 +17,37 @@
         </button>
     </div>
 
-    <!-- KPIs y Badges Superiores -->
+    <!-- KPIs y Badges Superiores con KpiCard Estandarizado -->
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm bg-white p-3 rounded-3 d-flex flex-row align-items-center justify-content-between">
-                <div>
-                    <span class="text-muted small fw-semibold uppercase d-block mb-1">Novedades Abiertas</span>
-                    <h3 class="fw-bold text-primary mb-0">@_cntAbiertas</h3>
-                </div>
-                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
-                    <i class="bi bi-folder-fill fs-4"></i>
-                </div>
-            </div>
+        <div class="col-sm-6 col-md-3">
+            <KpiCard Titulo="Novedades Abiertas"
+                     Valor="@_cntAbiertas.ToString()"
+                     Subtitulo="Total registradas"
+                     Icono="bi-folder2-open"
+                     Color="primary" />
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm bg-white p-3 rounded-3 d-flex flex-row align-items-center justify-content-between">
-                <div>
-                    <span class="text-muted small fw-semibold uppercase d-block mb-1">En Proceso</span>
-                    <h3 class="fw-bold text-warning mb-0">@_cntEnProgreso</h3>
-                </div>
-                <div class="bg-warning bg-opacity-10 text-warning p-3 rounded-circle">
-                    <i class="bi bi-gear-fill fs-4"></i>
-                </div>
-            </div>
+        <div class="col-sm-6 col-md-3">
+            <KpiCard Titulo="En Proceso"
+                     Valor="@_cntEnProgreso.ToString()"
+                     Subtitulo="En atención operativa"
+                     Icono="bi-gear"
+                     Color="warning" />
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm bg-white p-3 rounded-3 d-flex flex-row align-items-center justify-content-between">
-                <div>
-                    <span class="text-muted small fw-semibold uppercase d-block mb-1">Pendiente Info</span>
-                    <h3 class="fw-bold text-danger mb-0">@_cntPendientesInfo</h3>
-                </div>
-                <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
-                    <i class="bi bi-info-circle-fill fs-4"></i>
-                </div>
-            </div>
+        <div class="col-sm-6 col-md-3">
+            <KpiCard Titulo="Pendiente de información"
+                     Valor="@_cntPendientesInfo.ToString()"
+                     Subtitulo="Requiere datos del visitador"
+                     Icono="bi-info-circle"
+                     Color="danger"
+                     Alerta="@(_cntPendientesInfo > 0)" />
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm bg-white p-3 rounded-3 d-flex flex-row align-items-center justify-content-between">
-                <div>
-                    <span class="text-muted small fw-semibold uppercase d-block mb-1">Vencidas</span>
-                    <h3 class="fw-bold text-danger mb-0">@_cntVencidas</h3>
-                </div>
-                <div class="bg-danger bg-opacity-20 text-danger p-3 rounded-circle">
-                    <i class="bi bi-exclamation-triangle-fill fs-4 animate-pulse"></i>
-                </div>
-            </div>
+        <div class="col-sm-6 col-md-3">
+            <KpiCard Titulo="Vencidas"
+                     Valor="@_cntVencidas.ToString()"
+                     Subtitulo="Alerta por plazo excedido"
+                     Icono="bi-alarm"
+                     Color="danger"
+                     Alerta="@(_cntVencidas > 0)" />
         </div>
     </div>
 
@@ -104,9 +90,9 @@
                     </select>
                 </div>
                 <div class="col-md-3 col-sm-6">
-                    <label class="form-label small fw-semibold text-muted">Farmacia (PDV)</label>
+                    <label class="form-label small fw-semibold text-muted">Punto de venta (PDV)</label>
                     <select class="form-select form-select-sm" @bind="_filterPdvId">
-                        <option value="">Todas</option>
+                        <option value="">Todos los puntos de venta</option>
                         @if (_farmacias != null)
                         {
                             @foreach (var f in _farmacias)
@@ -119,7 +105,7 @@
                 <div class="col-md-3 col-sm-6">
                     <label class="form-label small fw-semibold text-muted">Responsable</label>
                     <select class="form-select form-select-sm" @bind="_filterResponsableId">
-                        <option value="">Todos</option>
+                        <option value="">Todos los responsables</option>
                         @if (_usuarios != null)
                         {
                             @foreach (var u in _usuarios)
@@ -131,18 +117,18 @@
                 </div>
                 <div class="col-md-3 col-sm-6">
                     <label class="form-label small fw-semibold text-muted">Desde</label>
-                    <input type="date" class="form-control form-control-sm" @bind="_filterDesde" />
+                    <input type="date" class="form-control form-control-sm" @bind="_filterDesde" aria-label="Fecha desde" />
                 </div>
                 <div class="col-md-3 col-sm-6">
                     <label class="form-label small fw-semibold text-muted">Hasta</label>
-                    <input type="date" class="form-control form-control-sm" @bind="_filterHasta" />
+                    <input type="date" class="form-control form-control-sm" @bind="_filterHasta" aria-label="Fecha hasta" />
                 </div>
                 <div class="col-md-6 d-flex align-items-end justify-content-end gap-2">
-                    <button class="btn btn-sm btn-outline-secondary px-3" @onclick="ClearFiltersAsync">
-                        <i class="bi bi-trash me-1"></i> Limpiar
+                    <button class="btn btn-sm btn-outline-secondary px-3" @onclick="ClearFiltersAsync" title="Restablecer todos los filtros">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar filtros
                     </button>
-                    <button class="btn btn-sm btn-primary px-4" @onclick="LoadNovedadesAsync">
-                        <i class="bi bi-funnel me-1"></i> Filtrar
+                    <button class="btn btn-sm btn-primary px-4" @onclick="LoadNovedadesAsync" title="Aplicar los filtros seleccionados">
+                        <i class="bi bi-funnel me-1"></i> Aplicar filtros
                     </button>
                 </div>
             </div>
@@ -170,17 +156,42 @@
                 <div class="card-body p-0">
                     @if (_loadingList)
                     {
-                        <div class="d-flex justify-content-center py-5">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Cargando...</span>
+                        <div class="d-flex flex-column justify-content-center align-items-center py-5">
+                            <div class="spinner-border text-primary mb-2" role="status">
+                                <span class="visually-hidden">Consultando novedades...</span>
                             </div>
+                            <div class="text-secondary small">Consultando listado de novedades...</div>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(_listError))
+                    {
+                        <div class="p-4 text-center">
+                            <div class="text-danger mb-2"><i class="bi bi-exclamation-triangle-fill fs-2"></i></div>
+                            <h6 class="fw-bold text-dark">Error al consultar las novedades</h6>
+                            <p class="text-secondary small mb-3">@_listError</p>
+                            <button class="btn btn-sm btn-primary px-3" @onclick="LoadNovedadesAsync">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Reintentar
+                            </button>
                         </div>
                     }
                     else if (_pagedResponse == null || !_pagedResponse.Items.Any())
                     {
-                        <div class="text-center py-5">
-                            <i class="bi bi-chat-left-dots text-muted fs-1 mb-2 d-block"></i>
-                            <p class="text-muted mb-0">No se encontraron novedades con los filtros seleccionados.</p>
+                        <div class="p-4">
+                            @if (HasActiveFilters)
+                            {
+                                <EmptyState Icon="bi-funnel"
+                                            Titulo="No hay novedades que coincidan con los filtros"
+                                            Mensaje="No se encontraron registros para los criterios de estado, categoría o fechas aplicados."
+                                            BotonTexto="Limpiar filtros"
+                                            BotonIcono="bi-arrow-counterclockwise"
+                                            OnAccion="ClearFiltersAsync" />
+                            }
+                            else
+                            {
+                                <EmptyState Icon="bi-chat-left-dots"
+                                            Titulo="Aún no se han registrado novedades"
+                                            Mensaje="No existen incidencias reportadas en el sistema para los puntos de venta." />
+                            }
                         </div>
                     }
                     else
@@ -719,6 +730,16 @@
     private bool _loadingList;
     private bool _loadingDetail;
     private string? _error;
+    private string? _listError;
+
+    private bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(_filterEstado) ||
+        !string.IsNullOrWhiteSpace(_filterCategoria) ||
+        !string.IsNullOrWhiteSpace(_filterPrioridad) ||
+        !string.IsNullOrWhiteSpace(_filterPdvId) ||
+        !string.IsNullOrWhiteSpace(_filterResponsableId) ||
+        _filterDesde.HasValue ||
+        _filterHasta.HasValue;
 
     // Métricas/Contadores superiores
     private int _cntAbiertas;
@@ -796,6 +817,7 @@
     {
         _loadingList = true;
         _error = null;
+        _listError = null;
 
         var result = await Api.GetNovedadesResultAsync(
             estado: _filterEstado,
@@ -815,7 +837,7 @@
         }
         else
         {
-            _error = result.ErrorMessage ?? "Error desconocido al obtener las novedades.";
+            _listError = result.ErrorMessage ?? "Error desconocido al obtener las novedades.";
         }
 
         _loadingList = false;

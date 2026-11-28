@@ -1,24 +1,40 @@
-@* Parámetros: Titulo, Valor, Icono (bi-*), Color (bootstrap), Subtitulo, Alerta *@
+@* Componente KpiCard Estandarizado - VisitaPDV Admin *@
 
-<div class="card border-0 shadow-sm h-100">
-    <div class="card-body d-flex flex-column justify-content-between">
-        <div class="d-flex align-items-center mb-2">
-            <span class="text-@Color fs-3 me-2"><i class="bi @Icono"></i></span>
+<div class="card vpdv-card border-0 shadow-sm h-100">
+    <div class="card-body p-3 d-flex flex-column justify-content-between">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="d-flex align-items-center">
+                <div class="kpi-icon-wrapper rounded-3 d-flex align-items-center justify-content-center me-2 @GetColorClassBg()">
+                    <i class="bi @Icono @GetColorClassText() fs-5"></i>
+                </div>
+                <span class="text-secondary small fw-medium text-truncate" title="@Titulo">@Titulo</span>
+            </div>
             @if (Alerta)
             {
-                <span class="ms-auto badge bg-danger rounded-pill">!</span>
+                <span class="badge bg-danger rounded-pill" title="Requiere atención">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                </span>
             }
         </div>
         <div>
-            <div class="fs-2 fw-bold text-@Color">@Valor</div>
-            <div class="text-muted small">@Titulo</div>
+            <div class="fs-3 fw-bold @GetColorClassText() text-truncate">@Valor</div>
             @if (!string.IsNullOrEmpty(Subtitulo))
             {
-                <div class="text-muted" style="font-size:0.72rem">@Subtitulo</div>
+                <div class="text-muted small mt-1 text-truncate" style="font-size: 0.78rem;" title="@Subtitulo">
+                    @Subtitulo
+                </div>
             }
         </div>
     </div>
 </div>
+
+<style>
+    .kpi-icon-wrapper {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+    }
+</style>
 
 @code {
     [Parameter, EditorRequired] public string Titulo    { get; set; } = string.Empty;
@@ -27,4 +43,24 @@
     [Parameter]                 public string Color     { get; set; } = "primary";
     [Parameter]                 public string? Subtitulo { get; set; }
     [Parameter]                 public bool   Alerta    { get; set; }
+
+    private string GetColorClassText() => Color.ToLowerInvariant() switch
+    {
+        "primary" or "purple" => "text-primary",
+        "danger"  or "red"    => "text-danger",
+        "warning" or "amber"  => "text-warning",
+        "success" or "green"  => "text-success",
+        "info"    or "teal"   => "text-info",
+        _ => "text-primary"
+    };
+
+    private string GetColorClassBg() => Color.ToLowerInvariant() switch
+    {
+        "primary" or "purple" => "badge-soft-primary",
+        "danger"  or "red"    => "badge-soft-danger",
+        "warning" or "amber"  => "badge-soft-warning",
+        "success" or "green"  => "badge-soft-success",
+        "info"    or "teal"   => "badge-soft-info",
+        _ => "badge-soft-primary"
+    };
 }

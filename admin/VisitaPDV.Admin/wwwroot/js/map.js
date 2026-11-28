@@ -129,6 +129,28 @@ window.farmaciaMap = {
             });
     },
 
+    getCurrentLocation: function () {
+        var self = this;
+        if (!navigator.geolocation) {
+            alert('La geolocalización no está soportada por este navegador.');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+                self.update(lat, lng, null);
+                self.notifyBlazor(lat, lng);
+            },
+            function (error) {
+                console.warn('Error al obtener geolocalización:', error);
+                alert('No se pudo obtener la ubicación actual. Verifique los permisos del navegador.');
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    },
+
     notifyBlazor: function (lat, lng) {
         if (this.dotNetRef) {
             this.dotNetRef.invokeMethodAsync('UpdateCoordinates', lat, lng);
